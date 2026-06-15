@@ -342,6 +342,28 @@ NMI_STACK_PTR               EQU $085E               ; used by NMI handler to sto
 V.PTR                       EQU $0870               
 
 
+;
+; Cooperative multitasking job system.
+;
+; Berzerk uses a coroutine-based scheduler where each game entity (player,
+; robots, Evil Otto) runs as a "job." Jobs allocate checkpoint nodes on the
+; Z80 stack and voluntarily yield to the runner, which round-robins through
+; the linked list and resumes the next active job.
+;
+; Each job follows this pattern:
+;   1. CREATE_JOB — allocate a node on the stack
+;   2. ACTIVATE_HEAD_JOB — mark it runnable with a delay
+;   3. Main loop: do work, then call STOP_JOB to checkpoint and yield
+;   4. The runner eventually circles back and resumes the job
+;
+; Key addresses:
+;   TIMER_LIST_PTR ($0872) — head of the linked list of job nodes
+;   CREATE_JOB  ($1E22)    — allocate a new node, insert as head
+;   ACTIVATE_HEAD_JOB ($1E6D) — mark head node runnable
+;   STOP_JOB    ($1E78)    — save SP, yield to runner
+;   Runner      ($1E8B)    — walk list, find active job, resume it
+;
+
 struct TIMER_ITEM
 {
     BYTE Flags
@@ -4329,113 +4351,153 @@ WALLINDEX:
 1E1F: C3 0B 1E    jp   $1E0B
 
 ;
-; This adds an item to the linked list.
+; CREATE_JOB — Push a 4-byte node onto the stack and make it the new
+; head of TIMER_LIST_PTR ($0872).
 ;
-; Note: the CREATE_JOB label I have assigned is tentative and could change.
-; Am fairly sure this is a job scheduling algorithm. 
-; Frenzy uses a different job system entirely.
+; Pseudocode:
+;   pop return_addr
+;   push $0001; push $0001          // 4 bytes for the node
+;   node = SP                        // node address
+;   if (TIMER_LIST_PTR == 0):
+;       TIMER_LIST_PTR = node       // first job ever
+;   else:
+;       old_head = TIMER_LIST_PTR
+;       *(old_head - 2) = node      // link old head back to new node
+;       TIMER_LIST_PTR = node       // node becomes new head
+;   return to return_addr
+;
+; Nodes live entirely on the stack. The link between a node and the
+; next-older node is stored in the 2 bytes immediately BEFORE the
+; older node (at old_head - 2). The runner ($1E8F) walks this reverse
+; chain, following these 2-byte links backward through time.
 
 CREATE_JOB:
-1E22: E1          pop  hl                    ; pull return address from stack
-1E23: D9          exx                        ; swap to alternate register set   
-1E24: 21 01 00    ld   hl,$0001              
-1E27: E5          push hl                    ; reserve 4 bytes..
-1E28: E5          push hl                    ; ..on stack
+1E22: E1          pop  hl                    ; pop return address → jump here when job runs
+1E23: D9          exx                        ; use alternate registers
+1E24: 21 01 00    ld   hl,$0001
+1E27: E5          push hl                    ; allocate node (4 bytes, init $0001)
+1E28: E5          push hl
 1E29: 21 00 00    ld   hl,$0000
-1E2C: 39          add  hl,sp                 ; HL = SP
-
-; Check if this linked list already has a head.
-1E2D: 3A 73 08    ld   a,($0873)             ; read MSB of contents of TIMER_LIST_PTR
-1E30: B7          or   a                     ; test if zero 
-1E31: 20 06       jr   nz,$1E39              ; if non-zero then our linked list already has a head, goto $1E39
+1E2C: 39          add  hl,sp                 ; HL = node address
+1E2D: 3A 73 08    ld   a,($0873)             ; TIMER_LIST_PTR MSB
+1E30: B7          or   a                     ; any previous jobs?
+1E31: 20 06       jr   nz,$1E39              ; yes → link them up
 1E33: E5          push hl
-
-; Linked list doesn't have a head, so make one.
-1E34: 22 72 08    ld   ($0872),hl            ; set head of linked list
-1E37: 18 1E       jr   $1E57                 ; and exit
-
-; If we get here, then the linked list already has a head. We want to make the item in HL the new head,
-; and make the "old" head the next link of the new. 
-1E39: FD E5       push iy
-1E3B: C1          pop  bc                    ; Preserve IY in BC
-1E3C: FD 2A 72 08 ld   iy,($0872)            ; get head of list by reading contents of TIMER_LIST_PTR
-1E40: EB          ex   de,hl                 ; DE = new head
-1E41: FD 66 FF    ld   h,(iy-$01)
+1E34: 22 72 08    ld   ($0872),hl            ; first job: set head
+1E37: 18 1E       jr   $1E57                 ; done
+1E39: FD E5       push iy                    ; preserve IY
+1E3B: C1          pop  bc
+1E3C: FD 2A 72 08 ld   iy,($0872)            ; IY = old head
+1E40: EB          ex   de,hl                 ; DE = new node
+1E41: FD 66 FF    ld   h,(iy-$01)            ; read old head's backward link
 1E44: FD 6E FE    ld   l,(iy-$02)
-1E47: E5          push hl
+1E47: E5          push hl                    ; save it
 1E48: F3          di
-1E49: FD 72 FF    ld   (iy-$01),d            
-1E4C: FD 73 FE    ld   (iy-$02),e
+1E49: FD 72 FF    ld   (iy-$01),d            ; overwrite with new node address
+1E4C: FD 73 FE    ld   (iy-$02),e            ; → old head now links back to new
 1E4F: FB          ei
-1E50: ED 53 72 08 ld   ($0872),de            ; set new head of linked list
-1E54: C5          push bc
-1E55: FD E1       pop  iy                    ; Restore IY from BC (see $1E3B)
-1E57: D9          exx                        ; swap to normal register set              
-1E58: E9          jp   (hl)                  ; jump to return address popped @ $1E22
+1E50: ED 53 72 08 ld   ($0872),de            ; new node is now the head
+1E54: C5          push bc                    ; restore IY
+1E55: FD E1       pop  iy
+1E57: D9          exx                        ; back to normal registers
+1E58: E9          jp   (hl)                  ; return to caller
 
 
 ;
-; Allocate 24 bytes on the stack and save the address of the reserved bytes in the head of the LINKED_LIST.
+; Job bootstrap helper — allocate 24 bytes of stack workspace for the
+; current job, then store the old SP (before allocation) into the head
+; node at +2. Finally jumps to (IY), which is typically the runner.
 ;
-; IY = address of routine to jump to
+; This is called once per job, right after CREATE_JOB and ACTIVATE_HEAD_JOB.
+; The saved SP becomes the job's "entry point" that the runner will
+; restore to when first activating the job.
 ;
+; Expects: IY = address to jump to after setup (usually runner at $1E8B)
 
 1E59: 21 00 00    ld   hl,$0000
-1E5C: 39          add  hl,sp                 ; HL = SP
-1E5D: EB          ex   de,hl                 ; now DE = SP.
-1E5E: 21 E8 FF    ld   hl, -24
+1E5C: 39          add  hl,sp                 ; HL = SP (before allocation)
+1E5D: EB          ex   de,hl                 ; DE = old SP
+1E5E: 21 E8 FF    ld   hl, -24               ; allocate 24 bytes
 1E61: 39          add  hl,sp
-1E62: F9          ld   sp,hl                 ; allocate 24 bytes on stack
-
-1E63: 2A 72 08    ld   hl,($0872)            ; get head of list by reading contents of TIMER_LIST_PTR
-1E66: 23          inc  hl
+1E62: F9          ld   sp,hl
+1E63: 2A 72 08    ld   hl,($0872)            ; HL = head node
+1E66: 23          inc  hl                    ; offset to +2
 1E67: 23          inc  hl
-1E68: 73          ld   (hl),e                ; write DE into head
+1E68: 73          ld   (hl),e                ; store old SP (checkpoint)
 1E69: 23          inc  hl
 1E6A: 72          ld   (hl),d
-1E6B: FD E9       jp   (iy)
+1E6B: FD E9       jp   (iy)                  ; jump to runner
 
 
 ;
-; A = delay before job starts
+; ACTIVATE_HEAD_JOB — Mark the head job as runnable with a delay countdown.
 ;
+; Sets the head node's delay field and writes $82 to the flags field.
+; After this, the runner will see this job as active (once the delay
+; expires) and resume it.
 
 ACTIVATE_HEAD_JOB:
-1E6D: FD 2A 72 08 ld   iy,($0872)            ; load IY with pointer to head of linked job list
-1E71: FD 77 01    ld   (iy+$01),a            ; update TIMER_ITEM.Delay
-1E74: FD 36 00 82 ld   (iy+$00),$82          ; update TIMER_ITEM.Flags
+1E6D: FD 2A 72 08 ld   iy,($0872)            ; IY = head node
+1E71: FD 77 01    ld   (iy+$01),a            ; store delay count
+1E74: FD 36 00 82 ld   (iy+$00),$82          ; set flags = $82 (active + ?)
 
+
+;
+; STOP_JOB — Checkpoint the current job and yield to the runner.
+;
+; Saves SP into the head node at +2 (the job's resume point), resets
+; SP to $0870 (above all job data), then falls into the runner.
+; The job will be resumed later when the runner restores its saved SP
+; and returns.
 
 STOP_JOB:
-1E78: FD 2A 72 08 ld   iy,($0872)
+1E78: FD 2A 72 08 ld   iy,($0872)            ; IY = head node
 1E7C: 21 00 00    ld   hl,$0000
-1E7F: 39          add  hl,sp                 ; HL = SP
-1E80: 31 70 08    ld   sp,$0870
-1E83: FD 75 02    ld   (iy+$02),l
+1E7F: 39          add  hl,sp                 ; HL = current SP (checkpoint)
+1E80: 31 70 08    ld   sp,$0870              ; reset SP above job data
+1E83: FD 75 02    ld   (iy+$02),l            ; save checkpoint SP at +2,+3
 1E86: FD 74 03    ld   (iy+$03),h
+                                              ; fall through to runner
 1E89: 18 04       jr   $1E8F
 
 ;
-; Find and resume the next active job in the linked list.
-; Walks the linked job list until it finds an item with
-; bit 0 of TIMER_ITEM.Flags set, then restores the stack
-; pointer from that item and returns, effectively resuming
-; that job's execution context.
+; JOB RUNNER — Walk the backward-linked chain of job nodes looking
+; for one whose 2-byte link has bit 0 set ("active"). When found,
+; restore that job's saved SP and return → the job resumes.
 ;
+; Pseudocode:
+;   node = TIMER_LIST_PTR
+;   loop:
+;       link = *(node - 2)          // 2-byte link stored before node
+;       node = link                  // follow it backward
+;       if (link & 1): break        // bit 0 set → active
+;   SP = *(node + 2)                // restore job's saved stack
+;   TIMER_LIST_PTR = node           // becomes new head
+;   return                          // job resumes
+;
+; Entry at $1E8B: loads node from TIMER_LIST_PTR (fresh start).
+; Entry at $1E8F: node already in IY (from STOP_JOB fall-through).
+;
+; The link stored at node-2 was set by the NEXT call to CREATE_JOB
+; (the job created after this one). For the oldest job in the chain
+; (the first one created), node-2 contains whatever was on the stack
+; at the time — typically a return address whose bit 0 depends on
+; the caller's ROM address.
 
-1E8B: FD 2A 72 08 ld   iy,($0872)
+1E8B: FD 2A 72 08 ld   iy,($0872)            ; node = head
 
-1E8F: FD 66 FF    ld   h,(iy-$01)
+1E8F: FD 66 FF    ld   h,(iy-$01)            ; read link at node-2
 1E92: FD 6E FE    ld   l,(iy-$02)
 1E95: E5          push hl
-1E96: FD E1       pop  iy                    ; IY = HL
-1E98: CB 46       bit  0,(hl)
-1E9A: CA 8F 1E    jp   z,$1E8F
-1E9D: FD 6E 02    ld   l,(iy+$02)
+1E96: FD E1       pop  iy                    ; node = link (walk backward)
+1E98: CB 46       bit  0,(hl)                ; link & 1 ?
+1E9A: CA 8F 1E    jp   z,$1E8F               ; no → keep walking
+
+1E9D: FD 6E 02    ld   l,(iy+$02)            ; load job's saved SP
 1EA0: FD 66 03    ld   h,(iy+$03)
-1EA3: FD 22 72 08 ld   ($0872),iy
-1EA7: F9          ld   sp,hl
-1EA8: C9          ret
+1EA3: FD 22 72 08 ld   ($0872),iy            ; this node is new head
+1EA7: F9          ld   sp,hl                 ; switch to job's stack
+1EA8: C9          ret                        ; resume the job
 
 ;
 ;
@@ -5985,8 +6047,6 @@ RANDOM:
 268B: C9          ret
 
 
-; 15-byte maze zone attribute grid (5 cols x 3 rows).
-; Initialised by an LDIR @ $2567 during room initialisation:
 ;
 ;   $268C: 05 04 04 04 06    ; row 0, cols 0-4 (X<70)
 ;   $2691: 01 00 00 00 02    ; row 1, cols 0-4 (70≤X<138)

@@ -4888,7 +4888,7 @@ DIRECTION_OFFSET_TABLE:
 ; Example — player moving LEFT (direction index = 1):
 ;
 ;   DIRECTION_OFFSET_TABLE[1] = $0C (12 decimal)
-;   PLAYER_ANIMATION_TABLE + $0C points to two bytes: $56, $10, which form address $1056
+;   PLAYER_ANIMATION_TABLE + $0C points to two bytes: $56, $10, which form address $1056.
 ;   $1056 is the "moving left" animation table (a 4-frame cycle).
 ;
 ; Note that offsets $02 through $10 (moving up/right/down) all share

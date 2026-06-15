@@ -418,13 +418,17 @@ CMOS_HIGH_SCORES            EQU $08DC
 ???                         EQU $4066
 
 
-; Status bits used in VECTOR structure
-STATUS_BIT_ERASE	EQU	0		
-STATUS_BIT_WRITE	EQU	1
-STATUS_BIT_MOVE	    EQU	2
-STATUS_BIT_BLANK	EQU	3
-STATUS_BIT_COLOR	EQU	4
-STATUS_BIT_HIT      EQU 7                    
+; VECTOR.Status bit definitions. Names from Frenzy's equs.asm.
+; Berzerk differs from Frenzy: HIT is bit 7 here (Frenzy uses bit 6
+; with InUse at bit 7). Bit 6 is unused in Berzerk.
+;
+ERASE   EQU 0   ; pattern needs XOR-erase from old position
+WRITE   EQU 1   ; pattern needs to be drawn at new position
+MOVE    EQU 2   ; object is moving (velocity applied each tick)
+BLANK   EQU 3   ; player colour was drawn here, needs restoring
+COLOR   EQU 4   ; player colour should be drawn here
+INEPT   EQU 5   ; non-bolt hit / death animation flag
+HIT     EQU 7   ; object was struck by a bolt (Frenzy: bit 6)
 
 
 ;
@@ -2759,27 +2763,33 @@ HANDLE_BOLT_COLLISION:
 15A4: DD 2A 76 08 ld   ix,($0876)            ; load IX with contents of MAN_PTR
 15A8: CD CB 15    call $15CB                 ; call COLLISION_DETECTION
 
-; Now check if the bolt has hit any robots
-15AB: ED 4B 70 08 ld   bc,($0870)            ; load HL with contents of V.PTR
+;
+; Iterate over the circular linked list of robot VECTORs at V.PTR ($0870).
+; Each VECTOR stores a backward link to the previous VECTOR at offsets
+; ix-$02 (lo) and ix-$01 (hi) — the same linked-list scheme as CREATE_JOB.
+;
+; Loop: check collision against current robot, then follow the backward
+; link to the next robot. Stop when the link points back to the head.
+;
+15AB: ED 4B 70 08 ld   bc,($0870)            ; BC = V.PTR (head of robot list, sentinel)
 15AF: 78          ld   a,b
-15B0: B1          or   c                     ; check if pointer is NULL
-15B1: 28 17       jr   z,$15CA               ; if NULL, goto $15CA
+15B0: B1          or   c                     ; check if list is empty
+15B1: 28 17       jr   z,$15CA               ; if NULL, no robots → done
 
-; BC = pointer to VECTOR structure for robot
-15B3: C5          push bc                    ; We want to make IX = BC. There's no ld ix,bc instruction so...
-15B4: DD E1       pop  ix                    ; IX = pointer to VECTOR structure for robot
-15B6: CD CB 15    call $15CB                 ; call COLLISION_DETECTION
-15B9: DD 66 FF    ld   h,(ix-$01)
+15B3: C5          push bc                    ; push head (cannot do ld ix,bc directly)
+15B4: DD E1       pop  ix                    ; IX = robot VECTOR
+15B6: CD CB 15    call $15CB                 ; call COLLISION_DETECTION against this robot
+15B9: DD 66 FF    ld   h,(ix-$01)            ; read backward link (same scheme as job nodes)
 15BC: DD 6E FE    ld   l,(ix-$02)
 15BF: E5          push hl
-15C0: DD E1       pop  ix
-15C2: 7D          ld   a,l
+15C0: DD E1       pop  ix                    ; IX = next (older) robot
+15C2: 7D          ld   a,l                   ; compare link to head sentinel
 15C3: B9          cp   c
-15C4: 20 F0       jr   nz,$15B6
+15C4: 20 F0       jr   nz,$15B6              ; not back to start → check next
 15C6: 7C          ld   a,h
 15C7: B8          cp   b
-15C8: 20 EC       jr   nz,$15B6
-15CA: C9          ret
+15C8: 20 EC       jr   nz,$15B6              ; not back to start → check next
+15CA: C9          ret                        ; walked full circle → done
 
 
 ;
@@ -2793,7 +2803,7 @@ HANDLE_BOLT_COLLISION:
 ; See also: HITCHK in bolts.asm within Frenzy's source code.
 
 COLLISION_DETECTION:
-15CB: DD CB 00 56 bit  2,(ix+$00)            ; test MOVE bit of VECTOR.Status
+15CB: DD CB 00 56 bit  2,(ix+$00)            ; test MOVE bit
 15CF: C8          ret  z                     ; exit if not moving
 15D0: DD 66 0B    ld   h,(ix+$0b)            
 15D3: DD 6E 0A    ld   l,(ix+$0a)            ; HL = pointer to sprite pattern table
@@ -2825,7 +2835,7 @@ COLLISION_DETECTION:
 15F5: 14          inc  d                     ; and add 1 
 15F6: BA          cp   d                     ;  
 15F7: D0          ret  nc                    ; if (BOLT.X - VECTOR.X)+1 > d then exit
-15F8: DD CB 00 FE set  7,(ix+$00)            ; set HIT bit in VECTOR.STATUS 
+15F8: DD CB 00 FE set  7,(ix+$00)            ; set HIT bit
 15FC: DD CB FA C6 set  0,(ix-$06)            ; TODO: ????
 1600: E1          pop  hl
 1601: C9          ret
@@ -4414,6 +4424,7 @@ CREATE_JOB:
 ;
 ; Expects: IY = address to jump to after setup (usually runner at $1E8B)
 
+JOB_BOOTSTRAP:
 1E59: 21 00 00    ld   hl,$0000
 1E5C: 39          add  hl,sp                 ; HL = SP (before allocation)
 1E5D: EB          ex   de,hl                 ; DE = old SP
@@ -4505,14 +4516,14 @@ STOP_JOB:
 
 MAN:
 1EA9: CD D4 1F    call $1FD4                 ; call MAN_INIT
-1EAC: DD 36 00 16 ld   (ix+$00),$16          ; set STATUS_BIT_COLOR + STATUS_BIT_WRITE + STATUS_BIT_WRITE
+1EAC: DD 36 00 16 ld   (ix+$00),$16          ; set WRITE | MOVE | COLOR ($16 = $02|$04|$10)
 1EB0: CD 22 1E    call $1E22                 ; call CREATE_JOB
 1EB3: C5          push bc
 1EB4: FD 21 8B 1E ld   iy,$1E8B              
-1EB8: CD 59 1E    call $1E59
+1EB8: CD 59 1E    call $1E59                 ; call JOB_BOOTSTRAP → enters runner
 1EBB: C1          pop  bc
 1EBC: DD 2A 76 08 ld   ix,($0876)            ; Now IX = MAN_PTR, a pointer to the player's VECTOR structure. 
-1EC0: DD CB 00 7E bit  7,(ix+$00)            ; test STATUS_BIT_HIT bit is set. If it is, player has been killed!
+1EC0: DD CB 00 7E bit  7,(ix+$00)            ; test HIT bit — has player been killed?
 1EC4: C2 A7 1F    jp   nz,$1FA7              ; player's dead, goto PLAYER_DEAD
 
 1EC7: 3A 6E 43    ld   a,($436E)             ; read IS_DEMO_MODE
@@ -4704,7 +4715,7 @@ PLAYER_DEAD:
 1FA7: CD 39 34    call $3439                 ; play sound of player being electrocuted 
 1FAA: 3E 10       ld   a,$10                 ; set direction bits 
 1FAC: CD 94 1F    call $1F94                 ; call CDIR 
-1FAF: DD CB 00 EE set  5,(ix+$00)
+1FAF: DD CB 00 EE set  5,(ix+$00)            ; set INEPT bit (death animation)
 1FB3: CD 1F 2C    call $2C1F                 ; call SAY_GOT_THE_HUMANOID_GOT_THE_INTRUDER
 1FB6: 3E 2D       ld   a,$2D                 ; set timer for how long the frying lasts!
 1FB8: CD 6D 1E    call $1E6D                 ; call ACTIVATE_HEAD_JOB
@@ -4717,7 +4728,7 @@ PLAYER_DEAD:
 1FC4: 18 F5       jr   $1FBB
 
 1FC6: 2A 76 08    ld   hl,($0876)           ; load HL with contents of MAN_PTR. Now HL = pointer to player's VECTOR
-1FC9: 36 09       ld   (hl),$09             ; set STATUS_BIT_ERASE + STATUS_BIT_BLANK flags in VECTOR.Status
+1FC9: 36 09       ld   (hl),$09             ; set ERASE | BLANK ($09 = $01|$08)
 1FCB: FD CB 00 86 res  0,(iy+$00)
 1FCF: CD 78 1E    call $1E78
 1FD2: 18 FB       jr   $1FCF
@@ -5006,7 +5017,7 @@ SR.TAB:
 2107: 21 F0 FF    ld   hl,$FFF0
 210A: 39          add  hl,sp
 210B: F9          ld   sp,hl
-210C: CD 59 1E    call $1E59
+210C: CD 59 1E    call $1E59                 ; call JOB_BOOTSTRAP → enters runner
 210F: 21 10 00    ld   hl,$0010
 2112: 39          add  hl,sp
 2113: F9          ld   sp,hl
@@ -5477,6 +5488,9 @@ UPDATE_SCORE:
 239E: CB C6       set  0,(hl)                ; set XTRAMEN flag   
 23A0: 18 E7       jr   $2389                 ; refresh display to show extra life
 
+
+
+; TODO: There appears to be no references to this in the code. What is it?
 23A2: 0C          inc  c
 23A3: 0C          inc  c
 23A4: 40          ld   b,b
@@ -5520,12 +5534,12 @@ ROBOT:
 23CB: AF          xor  a
 23CC: CD 36 24    call $2436                 ; call SETPAT 
 23CF: DD 36 0C 01 ld   (ix+$0c),$01          ; set VECTOR.TIME
-23D3: DD 36 00 06 ld   (ix+$00),$06          ; set VECTOR.Status to STATUS_BIT_WRITE + STATUS_BIT_MOVE
+23D3: DD 36 00 06 ld   (ix+$00),$06          ; set WRITE | MOVE ($06 = $02|$04)
 23D7: CD 22 1E    call $1E22                 ; call CREATE_JOB
 
 ; 
 23DA: DD E5       push ix
-23DC: CD 59 1E    call $1E59
+23DC: CD 59 1E    call $1E59                 ; call JOB_BOOTSTRAP → enters runner
 23DF: 3A 4D 43    ld   a,($434D)             ; read RWAIT
 23E2: FE 1E       cp   $1E                   ; compare to minimum wait time (MinWait in Frenzy's code)
 23E4: 30 02       jr   nc,$23E8              ; if A>= RWAIT, goto $23E8
@@ -5587,7 +5601,7 @@ SEEK:
 2427: CD 78 1E    call $1E78
 242A: C1          pop  bc
 242B: DD E1       pop  ix
-242D: DD CB 00 7E bit  7,(ix+$00)            ; test STATUS_BIT_HIT in VECTOR.Status field  
+242D: DD CB 00 7E bit  7,(ix+$00)            ; test HIT bit
 2431: CA EF 23    jp   z,$23EF               ; if bits not set, robot is still functional, goto $23EF
 2434: 18 21       jr   $2457                 ; Robot's been hit! Goto BLAM!
 
@@ -6286,7 +6300,7 @@ WRITE_PATTERN:
 279D: DB 4E       in   a,($4E)               ; read intercept bit
 279F: CB 7F       bit  7,a
 27A1: C8          ret  z
-27A2: CB FE       set  7,(hl)                ; set STATUS_BIT_HIT
+27A2: CB FE       set  7,(hl)                ; set HIT bit
 27A4: FD CB FA C6 set  0,(iy-$06)
 27A8: C9          ret
 
@@ -7128,7 +7142,7 @@ SHOWO:
 2A90: CD 0E 20    call $200E
 2A93: CD 22 1E    call $1E22                 ; call CREATE_JOB
 2A96: DD E5       push ix
-2A98: CD 59 1E    call $1E59
+2A98: CD 59 1E    call $1E59                 ; call JOB_BOOTSTRAP → enters runner
 2A9B: DD E1       pop  ix
 
 ; Look at the player's current position in order to calculate Otto's start position.
@@ -9475,10 +9489,10 @@ UNCOLOUR_MAN:
 ;
 
 COLOUR_MAN:
-373C: CB 66       bit  4,(hl)                ; test STATUS_BIT_COLOR bit in VECTOR.Status
+373C: CB 66       bit  4,(hl)                ; test COLOR bit
 373E: C8          ret  z                     ; if the flag isn't set to colour the player sprite, exit
 
-373F: CB DE       set  3,(hl)                ; set STATUS_BIT_BLANK bit in VECTOR.Status
+373F: CB DE       set  3,(hl)                ; set BLANK bit
 3741: E5          push hl                    
 3742: 11 07 00    ld   de,$0007  
 3745: 19          add  hl,de                 ; bump HL to point to VECTOR P.X 

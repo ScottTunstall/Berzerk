@@ -4570,7 +4570,7 @@ MOVE_PLAYER:
 1EF6: B9          cp   c                     ; compare to last direction player moved.
 1EF7: C4 91 1F    call nz,$1F91              ; if the player has changed direction, call CHANGE_PLAYER_DIRECTION
 1EFA: C5          push bc
-1EFB: CD 78 1E    call $1E78
+1EFB: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 1EFE: C3 BB 1E    jp   $1EBB
 
 
@@ -4724,13 +4724,13 @@ PLAYER_DEAD:
 1FBB: FD 7E 01    ld   a,(iy+$01)
 1FBE: B7          or   a
 1FBF: 28 05       jr   z,$1FC6
-1FC1: CD 78 1E    call $1E78
+1FC1: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 1FC4: 18 F5       jr   $1FBB
 
 1FC6: 2A 76 08    ld   hl,($0876)           ; load HL with contents of MAN_PTR. Now HL = pointer to player's VECTOR
 1FC9: 36 09       ld   (hl),$09             ; set ERASE | BLANK ($09 = $01|$08)
 1FCB: FD CB 00 86 res  0,(iy+$00)
-1FCF: CD 78 1E    call $1E78
+1FCF: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 1FD2: 18 FB       jr   $1FCF
 
 
@@ -5102,7 +5102,7 @@ SR.TAB:
 21C0: CD B3 2D    call $2DB3                 ; call INCREMENT_BY_1
 21C3: CD 97 2B    call $2B97
 21C6: CD 78 26    call $2678                 ; call RANDOM
-21C9: CD 78 1E    call $1E78
+21C9: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 21CC: C3 57 21    jp   $2157
 
 21CF: 3E 06       ld   a,$06
@@ -5582,7 +5582,7 @@ SEEK:
 ; D and E hold Delta X and Delta Y (the horizontal and vertical distances of the player from the robot).
 240E: 0E 00       ld   c,$00
 
-; if delta Y == 0, that means the robot's Y coordinate and player's Y coordinates are about the same.
+; if delta Y == 0, that means the robot's Y coordinate and player's Y coordinates are the same.
 2410: 28 06       jr   z,$2418               ; if Player Y == Robot Y, goto $2418 
 2412: 0E 04       ld   c,$04                 ; DURL bit for UP
 2414: 38 02       jr   c,$2418
@@ -5592,13 +5592,15 @@ SEEK:
 2419: 81          add  a,c                   ; and combine with vertical DURL bits in C
 241A: F5          push af                    ; save DURL bits on stack
 241B: 4F          ld   c,a                   ; load C with DURL bits as SHOOT routine needs it
+
+; Robot shoots at player!
 241C: CD 7F 28    call $287F                 ; call SHOOT 
 241F: F1          pop  af
 2420: C1          pop  bc
 2421: CD 36 24    call $2436                 ; call SETPAT 
 2424: DD E5       push ix
 2426: C5          push bc
-2427: CD 78 1E    call $1E78
+2427: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 242A: C1          pop  bc
 242B: DD E1       pop  ix
 242D: DD CB 00 7E bit  7,(ix+$00)            ; test HIT bit
@@ -5740,7 +5742,7 @@ BLAM:
 24DE: BC          cp   h
 24DF: 28 09       jr   z,$24EA
 24E1: DD E5       push ix
-24E3: CD 78 1E    call $1E78
+24E3: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 24E6: DD E1       pop  ix
 24E8: 18 E8       jr   $24D2
 
@@ -5749,33 +5751,63 @@ BLAM:
 24EA: CD F7 24    call $24F7
 24ED: 2A 72 08    ld   hl,($0872)            ; load HL with contents of TIMER_LIST_PTR
 24F0: CB 86       res  0,(hl)
-24F2: CD 78 1E    call $1E78
+24F2: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 24F5: 18 F6       jr   $24ED
 
 
-24F7: DD E5       push ix
+;
+; SPLICE_VECTOR — Remove a robot VECTOR from the backward-linked list
+; at V.PTR ($0870). Called when a robot's death animation finishes.
+;
+; The linked list works like the job system: each VECTOR stores a
+; pointer to the previous VECTOR at offsets ix-$02 (lo) and ix-$01 (hi).
+; To remove a robot, this routine walks the chain looking for the node
+; that points TO the dying robot, then overwrites that link with the
+; dying robot's own backward pointer — effectively "unhooking" it.
+;
+; Frenzy uses an explicit JobDel routine instead; Berzerk does it
+; manually because of its different job/scheduling architecture.
+;
+; Pseudocode:
+;   dying_robot = IX                 // address of VECTOR being removed
+;   scanner = V.PTR - 1              // start searching from end of V.PTR
+;   loop:
+;       someones_backlink = *scanner // read the 2-byte backward link
+;       scanner = scanner - 1
+;       if (someones_backlink == dying_robot): found_it
+;   // scanner now points at the link that references dying_robot
+;   *scanner = *(dying_robot - 2)   // replace that link with dying_robot's
+;   V.PTR = scanner + 2             //   own backlink, splicing it out
+;
+; Expects: IX = VECTOR to remove
+; Destroys: BC, DE, HL
+
+24F7: DD E5       push ix                    ; BC = dying_robot address
 24F9: C1          pop  bc
 24FA: 50          ld   d,b
-24FB: 59          ld   e,c
-24FC: EB          ex   de,hl
-24FD: 2B          dec  hl
-24FE: 56          ld   d,(hl)
-24FF: 2B          dec  hl
-2500: 5E          ld   e,(hl)
-2501: 78          ld   a,b
-2502: BA          cp   d
-2503: 20 F7       jr   nz,$24FC
-2505: 79          ld   a,c
-2506: BB          cp   e
-2507: 20 F3       jr   nz,$24FC
+24FB: 59          ld   e,c                   ; DE = dying_robot
+24FC: EB          ex   de,hl                 ; HL = dying_robot
+
+; Walk backward through memory looking for who links to dying_robot
+24FD: 2B          dec  hl                    ; scanner = dying_robot - 1
+24FE: 56          ld   d,(hl)                ; read someones_backlink (hi)
+24FF: 2B          dec  hl                    ; scanner = scanner - 1
+2500: 5E          ld   e,(hl)                ; read someones_backlink (lo)
+2501: 78          ld   a,b                   ; compare backlink (hi)
+2502: BA          cp   d                     ;  against dying_robot (hi)
+2503: 20 F7       jr   nz,$24FC              ; not a match → step scanner back
+2505: 79          ld   a,c                   ; compare backlink (lo)
+2506: BB          cp   e                     ;  against dying_robot (lo)
+2507: 20 F3       jr   nz,$24FC              ; not a match → step scanner back
+                                              ; found: scanner points at link referencing dying_robot
 2509: F3          di
-250A: DD 7E FE    ld   a,(ix-$02)
-250D: 77          ld   (hl),a
+250A: DD 7E FE    ld   a,(ix-$02)            ; read dying_robot's own backlink (lo)
+250D: 77          ld   (hl),a                ; overwrite the found link → splices it out
 250E: 23          inc  hl
-250F: DD 7E FF    ld   a,(ix-$01)
+250F: DD 7E FF    ld   a,(ix-$01)            ; read dying_robot's own backlink (hi)
 2512: 77          ld   (hl),a
 2513: 23          inc  hl
-2514: 22 70 08    ld   ($0870),hl
+2514: 22 70 08    ld   ($0870),hl            ; V.PTR = scanner + 2
 2517: FB          ei
 2518: C9          ret
 
@@ -5803,7 +5835,7 @@ M.TAB:
     FF 00       ; Left (XDelta = -1, YDelta = 0)   
     FF FF       ; Up Left (XDelta =-1, YDelta = -1)   
     00 FF       ; Up (XDelta =0, YDelta = -1)   
-    00 00       ; Will not affect X,Y coordinates
+    00 00       ; XDelta, YDelta both 0: Will not affect X,Y coordinates
 
 
 ;
@@ -7306,7 +7338,7 @@ SET_VELOCITY:
 2B5B: DD E5       push ix
 2B5D: E5          push hl
 2B5E: C5          push bc
-2B5F: CD 78 1E    call $1E78
+2B5F: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 2B62: C1          pop  bc
 2B63: E1          pop  hl
 2B64: DD E1       pop  ix

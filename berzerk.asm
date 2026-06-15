@@ -2,9 +2,8 @@
 ; Berzerk (C) 1980 Stern Electronics.
 ;
 ; Reverse engineering work by Scott Tunstall, Paisley, Scotland. 
-; Tools used: MAME debugger & Visual Studio Code text editor.
-; Date: 26 Feb 2022 - sorry about the delay - Coronavirus and work got in the way. 
-; Keep checking for updates. 
+; Tools used: MAME debugger, Visual Studio Code text editor, Deepseek V4 AI.
+; Date: 15 June 2026 - keep checking for updates. 
 ; 
 ; Please send any questions, corrections and updates to scott.tunstall@ntlworld.com
 ;

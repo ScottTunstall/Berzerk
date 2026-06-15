@@ -486,6 +486,12 @@ OTTO_TIME                   EQU $434E               ; Countdown timer before Evi
 XTRAMEN                     EQU $434F               ; Flag. Set to 1 when a bonus life has been awarded to player. Prevents more bonus lives.   
 
 RNG_SEED                    EQU $435C               ; Seed for the random number generator @ $2678
+MAZE_ZONES                  EQU $435E               ; 15-byte maze zone attribute grid (5 cols x 3 rows).
+                                                    ; Initialised from the template at $268C by an LDIR @ $2567.
+                                                    ; Bit 0 ($01) = wall on LEFT edge  | Bit 1 ($02) = wall on RIGHT edge
+                                                    ; Bit 2 ($04) = wall on TOP edge   | Bit 3 ($08) = wall on BOTTOM edge
+                                                    ; Confirmed by $25EB (CREATE_ROOM) and $1C6E (IQ).
+
 UPDATE                      EQU $436D               ; Flag. Set to $FF when score needs to be updated on screen. See $218D
 IS_DEMO_MODE                EQU $436E               ; Flag. When set to a nonzero value, the game is showing "demo mode".   
 DEMO_PTR                    EQU $436F
@@ -2459,12 +2465,14 @@ WAIT_FOR_1P_FIRE_BUTTON:
 
 146D: 00          nop
 
+
+; NOT CALLED BY ANY ROUTINE (leftover dev code?)
 146E: C5          push bc
 146F: F5          push af
 1470: FD 2A 76 08 ld   iy,($0876)            ; load IY with contents of MAN_PTR
 1474: FD 66 07    ld   h,(iy+$07)            ; read VECTOR.P.X (X pos)
 1477: FD 6E 09    ld   l,(iy+$09)            ; read VECTOR.P.Y (Y pos)
-147A: CD E7 1C    call $1CE7
+147A: CD E7 1C    call $1CE7                 ; call WALLINDEX. On return A=attr, E=index
 147D: D5          push de
 147E: DD 66 07    ld   h,(ix+$07)
 1481: DD 6E 09    ld   l,(ix+$09)
@@ -2476,7 +2484,7 @@ WAIT_FOR_1P_FIRE_BUTTON:
 1489: 25          dec  h
 148A: 25          dec  h
 148B: 25          dec  h
-148C: CD E7 1C    call $1CE7
+148C: CD E7 1C    call $1CE7                 ; call WALLINDEX. On return A=attr, E=index
 148F: D9          exx
 1490: 47          ld   b,a
 1491: D9          exx
@@ -2492,21 +2500,21 @@ WAIT_FOR_1P_FIRE_BUTTON:
 149B: E5          push hl
 149C: C6 10       add  a,$10
 149E: 67          ld   h,a
-149F: CD E7 1C    call $1CE7
+149F: CD E7 1C    call $1CE7                 ; call WALLINDEX. On return A=attr, E=index
 14A2: D9          exx
 14A3: 4F          ld   c,a
 14A4: D9          exx
 14A5: 7D          ld   a,l
 14A6: C6 13       add  a,$13
 14A8: 6F          ld   l,a
-14A9: CD E7 1C    call $1CE7
+14A9: CD E7 1C    call $1CE7                 ; call WALLINDEX. On return A=attr, E=index
 14AC: D9          exx
 14AD: 57          ld   d,a
 14AE: D9          exx
 14AF: 7D          ld   a,l
 14B0: E1          pop  hl
 14B1: 6F          ld   l,a
-14B2: CD E7 1C    call $1CE7
+14B2: CD E7 1C    call $1CE7                 ; call WALLINDEX. On return A=attr, E=index
 14B5: D9          exx
 14B6: 5F          ld   e,a
 14B7: F1          pop  af
@@ -2569,6 +2577,16 @@ HANDLE_PLAYER_BOLTS:
 1500: CD 05 15    call $1505
 1503: 06 07       ld   b,$07
 
+;
+; Process player BOLTs.
+;
+; Expects:
+; B = number of BOLT slots to iterate through
+;
+; Calls PROCESS_BOLT @ $151A for each slot, then advances IY by sizeof(BOLT).
+;
+; See also: BOLT in bolts.asm within Frenzy's source code.
+
 1505: FD 21 7B 43 ld   iy,$437B              ; load IY with address of PLAYER_BOLTS   
 1509: C5          push bc
 150A: FD E5       push iy
@@ -2588,6 +2606,7 @@ HANDLE_PLAYER_BOLTS:
 ; Remarks:
 ; See also: 
 
+PROCESS_BOLT:
 151A: FD 7E 00    ld   a,(iy+$00)            ; read BOLT.Direction flags (DURL bits)
 151D: B7          or   a                     ; test if bolt is moving in any direction (0 = No)
 151E: 28 0C       jr   z,$152C               ; if bolt has no direction, then its inactive, goto $152C
@@ -2855,6 +2874,15 @@ COLLISION_DETECTION:
 165D: CA 4B 16    jp   z,$164B
 1660: CD 66 16    call $1666
 1663: CD B2 18    call $18B2
+
+;
+; Initialise/reset the game state and linked job list.
+; Disables interrupts, preserves return address on stack,
+; sets stack pointer to $4300 (top of scratch RAM),
+; then creates the initial job and processes it.
+;
+; See also: INT in init.asm within Frenzy's source code.
+
 1666: F3          di
 1667: E1          pop  hl
 1668: 22 00 44    ld   ($4400),hl
@@ -2867,6 +2895,13 @@ COLLISION_DETECTION:
 167E: 2A 00 44    ld   hl,($4400)
 1681: 3A 02 44    ld   a,($4402)
 1684: E9          jp   (hl)
+
+;
+; Initialise demo mode. Saves the player's current score,
+; sets IS_DEMO_MODE flag, copies default state, then
+; calls $209D to start a demo game.
+;
+; Returns: Zero flag set according to player state.
 
 1685: 2A 3E 43    ld   hl,($433E)
 1688: 22 73 43    ld   ($4373),hl
@@ -3171,6 +3206,11 @@ V.LOOP:
 184B: CD 51 2C    call $2C51
 184E: C3 4B 16    jp   $164B
 
+;
+; Clear player scores and reset voice pointer.
+; Zeros P1_SCORE, P2_SCORE and sets VOICE_PC to "no speech".
+;
+
 1851: 21 00 00    ld   hl,$0000
 1854: 22 3E 43    ld   ($433E),hl
 1857: 22 40 43    ld   ($4340),hl
@@ -3180,6 +3220,12 @@ V.LOOP:
 1863: 21 DB 1A    ld   hl,$1ADB
 1866: 22 98 08    ld   ($0898),hl            ; set VOICE_PC
 1869: C9          ret
+
+;
+; Swap current player state with saved player state buffer.
+; Exchanges 12 bytes at $4344 and $4350.
+;
+; See also: SWAP in main.asm within Frenzy's source code.
 
 186A: E5          push hl
 186B: 21 44 43    ld   hl,$4344
@@ -3211,6 +3257,17 @@ DEFAULT_PLAYER_STATE:
 1888: 5A          ld   e,d
 1889: 00          nop
 188A: 00          nop
+
+;
+; Wait for credits and/or start button press.
+; Loops through the timer list counting down delays.
+; If the free game (SW2 bit 0) button is pressed,
+; awards a free credit immediately.
+; Otherwise checks for coin insert or start button.
+;
+; See also: COIN1 in coins.asm within Frenzy's source code.
+;
+
 188B: 06 03       ld   b,$03
 188D: 2A 72 08    ld   hl,($0872)
 1890: 23          inc  hl
@@ -3230,6 +3287,16 @@ DEFAULT_PLAYER_STATE:
 18AD: 20 E7       jr   nz,$1896
 18AF: 10 DC       djnz $188D
 18B1: C9          ret
+
+;
+; Start button handler. Deducts credits and determines
+; number of players (1 or 2).
+;
+; Expects:
+; A = bitmask of which start buttons were pressed
+;
+; Returns:
+; ($4376) = 1 for 1-player, 2 for 2-player game
 
 18B2: 6F          ld   l,a
 18B3: CD F1 18    call $18F1                 ; call DECREMENT_CREDITS
@@ -3307,6 +3374,18 @@ DECREMENT_CREDITS:
 1907: C9          ret
 
 
+;
+; Process coin insertion for a chute.
+;
+; Expects:
+; HL = pointer to byte at $089C + offset
+; B = loop counter (chute processing index)
+; C = I/O port to read from
+;
+; Increments the appropriate CMOS coin counter
+; and adds credits based on DIP switch settings.
+;
+; See also: ClickToCredit in coins.asm within Frenzy's source code.
 
 1908: 7E          ld   a,(hl)
 1909: B7          or   a
@@ -3386,8 +3465,17 @@ DECREMENT_CREDITS:
 1974: 77          ld   (hl),a
 1975: 00          nop
 
+; TODO: Data table for coin processing
 1976: 21 11 21    ld   hl,$2111
 1979: 11 32 C5    ld   de,$C532
+
+;
+; Main coin processing routine. Scans all 3 coin chutes
+; and checks for coin insertions.
+;
+; See also: COINCK in coins.asm within Frenzy's source code.
+;
+
 197C: 21 9C 08    ld   hl,$089C
 197F: CD E0 18    call $18E0                 ; call GET_CREDITS_AS_BCD
 1982: F5          push af
@@ -3403,6 +3491,14 @@ DECREMENT_CREDITS:
 1995: C1          pop  bc
 1996: C9          ret
 
+;
+; Check if a start button has been pressed.
+;
+; Returns:
+; L = 0 if no credits, 1 if 1 credit, 3 if multiple credits
+; A = SYSTEM port bits (inverted)
+; Zero flag set if no start button pressed
+
 1997: CD E0 18    call $18E0                 ; call GET_CREDITS_AS_BCD
 199A: 2E 00       ld   l,$00
 199C: B7          or   a
@@ -3417,7 +3513,12 @@ DECREMENT_CREDITS:
 19AB: C9          ret
 
 
-; Definitely called
+;
+; Display the title / copyright screen.
+; Clears screen, prints "1980 STERN Electronics, Inc.",
+; shows credits, high scores, and inserts horizontal rules.
+;
+
 19AC: CD 4E 1A    call $1A4E                 ; call CLEAR_SCREEN
 19AF: CD AF 35    call $35AF                 ; call SET_COLOUR_ATTRS_35AF
 19B2: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
@@ -3574,6 +3675,11 @@ CLEAR_SCREEN:
 
 
 
+;
+; Display "Insert Coin" or "Push Start Button" message based on credit count.
+;
+; See also: INSERT in gameover.asm within Frenzy's source code.
+;
 1A98: CD DD 1A    call $1ADD                 ; call CLEAR_CHYRON
 1A9B: CD E0 18    call $18E0                 ; call GET_CREDITS_AS_BCD
 1A9E: 28 21       jr   z,$1AC1
@@ -3776,126 +3882,235 @@ LTABLE:
 1C5C:  50 6F 6E 67 61 20 6C 61 20 6D 6F 6E 65 64 61 00  Ponga la moneda.
 1C6C: C9          ret
 
-1C6D: A3          and  e
-1C6E: C5          push bc
-1C6F: F5          push af
-1C70: FD 2A 76 08 ld   iy,($0876)            ; load IY with contents of MAN_PTR
-1C74: FD 66 07    ld   h,(iy+$07)
-1C77: FD 6E 09    ld   l,(iy+$09)
-1C7A: CD E7 1C    call $1CE7
-1C7D: D5          push de
-1C7E: DD 66 07    ld   h,(ix+$07)
-1C81: DD 6E 09    ld   l,(ix+$09)
-1C84: 2D          dec  l
-1C85: 2D          dec  l
+1C6D: A3          and  e                    ; stray byte (orphaned from data preceding)
+
+;
+; Obstacle check for robot pathfinding. Called from SETPAT when a robot
+; is about to move in a new direction. Probes the maze layout grid at 4
+; points around the robot and tests which directions are blocked by walls.
+;
+; See also: IQ in iq.asm within Frenzy's source code.
+;
+; Expects:
+; A = desired direction (DURL bits)
+; IX = pointer to robot's VECTOR struct
+;
+; Returns:
+; A = allowed direction bits (blocked directions cleared)
+;
+
+IQ:
+1C6E: C5          push bc                    
+1C6F: F5          push af                    ; save desired direction (DURL bits)
+
+; Probe 1: get maze attribute at player's position
+1C70: FD 2A 76 08 ld   iy,($0876)            ; IY = MAN_PTR (player's VECTOR)
+1C74: FD 66 07    ld   h,(iy+$07)            ; H = player X
+1C77: FD 6E 09    ld   l,(iy+$09)            ; L = player Y
+1C7A: CD E7 1C    call $1CE7                 ; call WALLINDEX. On return A=attr, E=index
+1C7D: D5          push de                    ; save D=player attr, E=player index
+
+; Probe 2: get maze attribute at robot's position (offset -4,-4)
+1C7E: DD 66 07    ld   h,(ix+$07)            ; H = robot X
+1C81: DD 6E 09    ld   l,(ix+$09)            ; L = robot Y
+1C84: 2D          dec  l                     ; offset robot position
+1C85: 2D          dec  l                     ;  4 pixels up
 1C86: 2D          dec  l
 1C87: 2D          dec  l
-1C88: 25          dec  h
+1C88: 25          dec  h                     ;  4 pixels left
 1C89: 25          dec  h
 1C8A: 25          dec  h
 1C8B: 25          dec  h
-1C8C: CD E7 1C    call $1CE7
-1C8F: D9          exx
-1C90: 47          ld   b,a
-1C91: D9          exx
-1C92: C1          pop  bc
-1C93: 79          ld   a,c
-1C94: BB          cp   e
-1C95: 20 03       jr   nz,$1C9A
-1C97: F1          pop  af
-1C98: C1          pop  bc
-1C99: C9          ret
+1C8C: CD E7 1C    call $1CE7                 ; call WALLINDEX → A=attr (stored as B' top-left probe)
+1C8F: D9          exx                        ; switch to alternate registers
+1C90: 47          ld   b,a                   ; B' = top-left probe attribute
+1C91: D9          exx                        ; back to main registers
 
-1C9A: 7C          ld   a,h
-1C9B: E5          push hl
-1C9C: C6 10       add  a,$10
-1C9E: 67          ld   h,a
-1C9F: CD E7 1C    call $1CE7
+; Compare player and robot grid indices — if same, no obstacle on path
+1C92: C1          pop  bc                    ; B = player attr, C = player grid index
+1C93: 79          ld   a,c                   ; A = player's grid index
+1C94: BB          cp   e                     ; compare with robot's grid index
+1C95: 20 03       jr   nz,$1C9A              ; if different, probe more positions
+1C97: F1          pop  af                    ; same: restore registers
+1C98: C1          pop  bc                    ;  and return without modifying
+1C99: C9          ret                        ;  the desired direction
+
+; Probe 3: attribute at (robot.X+16-4, robot.Y-4) = top-right probe
+1C9A: 7C          ld   a,h                  ; A = robot.X-4 (HL still holds robot pos from $1C88)
+1C9B: E5          push hl                   ; save (robot.X-4, robot.Y-4) coordinates
+1C9C: C6 10       add  a,$10                ; add 16 to X
+1C9E: 67          ld   h,a                  ; H = robot.X-4+16 = robot.X+12
+1C9F: CD E7 1C    call $1CE7                 ; call WALLINDEX → A=attr (stored as C' top-right probe)
 1CA2: D9          exx
-1CA3: 4F          ld   c,a
+1CA3: 4F          ld   c,a                  ; C' = top-right probe attribute
 1CA4: D9          exx
-1CA5: 7D          ld   a,l
-1CA6: C6 13       add  a,$13
-1CA8: 6F          ld   l,a
-1CA9: CD E7 1C    call $1CE7
+
+; Probe 4: attribute at (robot.X+12, robot.Y-4+19) = bottom-right probe
+1CA5: 7D          ld   a,l                  ; A = robot.Y-4
+1CA6: C6 13       add  a,$13                ; add 19 to Y
+1CA8: 6F          ld   l,a                  ; L = robot.Y-4+19 = robot.Y+15
+1CA9: CD E7 1C    call $1CE7                 ; call WALLINDEX → A=attr (stored as D' bottom-right probe)
 1CAC: D9          exx
-1CAD: 57          ld   d,a
+1CAD: 57          ld   d,a                  ; D' = bottom-right probe attribute
 1CAE: D9          exx
-1CAF: 7D          ld   a,l
-1CB0: E1          pop  hl
-1CB1: 6F          ld   l,a
-1CB2: CD E7 1C    call $1CE7
+
+; Probe 5: attribute at (original.X-4, robot.Y+15) = bottom-left probe
+1CAF: 7D          ld   a,l                  ; A = robot.Y+15
+1CB0: E1          pop  hl                   ; H = (robot.X-4), L = (robot.Y-4) from push @ $1C9B
+1CB1: 6F          ld   l,a                  ; L = robot.Y+15, H = robot.X-4
+1CB2: CD E7 1C    call $1CE7                 ; call WALLINDEX → A=attr (stored as E' bottom-left probe)
 1CB5: D9          exx
-1CB6: 5F          ld   e,a
-1CB7: F1          pop  af
-1CB8: 67          ld   h,a
-1CB9: 2E 00       ld   l,$00
-1CBB: CB 5C       bit  3,h
-1CBD: 28 06       jr   z,$1CC5
-1CBF: 78          ld   a,b
-1CC0: B1          or   c
-1CC1: E6 08       and  $08
-1CC3: B5          or   l
+1CB6: 5F          ld   e,a                  ; E' = bottom-left probe attribute
+1CB7: F1          pop  af                   ; A = original desired direction (DURL bits)
+1CB8: 67          ld   h,a                  ; H = direction bits
+1CB9: 2E 00       ld   l,$00               ; L = 0 (accumulator for blocked direction mask)
+; The 4 probe points form a 2x2 grid centred on the robot:
+;   B' = top-left     (robot.X-4, robot.Y-4)
+;   C' = top-right    (robot.X+12, robot.Y-4)
+;   E' = bottom-left  (robot.X-4, robot.Y+15)
+;   D' = bottom-right (robot.X+12, robot.Y+15)
+;
+; For each desired direction bit, OR two adjacent probe attributes
+; and test the corresponding bit. If set, that path is blocked.
+
+; Test DOWN (bit 3): check top-edge probes (B' | C') & $08
+1CBB: CB 5C       bit  3,h                  ; DOWN direction desired?
+1CBD: 28 06       jr   z,$1CC5              ; if not, skip
+1CBF: 78          ld   a,b                  ; A = top-left probe attribute
+1CC0: B1          or   c                    ; OR with top-right probe
+1CC1: E6 08       and  $08                  ; test bit 3 (DOWN block flag)
+1CC3: B5          or   l                    ; accumulate in L
 1CC4: 6F          ld   l,a
-1CC5: CB 54       bit  2,h
-1CC7: 28 06       jr   z,$1CCF
-1CC9: 7A          ld   a,d
-1CCA: B3          or   e
-1CCB: E6 04       and  $04
-1CCD: B5          or   l
+
+; Test UP (bit 2): check bottom-edge probes (D' | E') & $04
+1CC5: CB 54       bit  2,h                  ; UP direction desired?
+1CC7: 28 06       jr   z,$1CCF              ; if not, skip
+1CC9: 7A          ld   a,d                  ; A = bottom-right probe attribute
+1CCA: B3          or   e                    ; OR with bottom-left probe
+1CCB: E6 04       and  $04                  ; test bit 2 (UP block flag)
+1CCD: B5          or   l                    ; accumulate in L
 1CCE: 6F          ld   l,a
-1CCF: CB 4C       bit  1,h
-1CD1: 28 06       jr   z,$1CD9
-1CD3: 78          ld   a,b
-1CD4: B3          or   e
-1CD5: E6 02       and  $02
-1CD7: B5          or   l
+
+; Test RIGHT (bit 1): check left-edge probes (B' | E') & $02
+1CCF: CB 4C       bit  1,h                  ; RIGHT direction desired?
+1CD1: 28 06       jr   z,$1CD9              ; if not, skip
+1CD3: 78          ld   a,b                  ; A = top-left probe attribute
+1CD4: B3          or   e                    ; OR with bottom-left probe
+1CD5: E6 02       and  $02                  ; test bit 1 (RIGHT block flag)
+1CD7: B5          or   l                    ; accumulate in L
 1CD8: 6F          ld   l,a
-1CD9: CB 44       bit  0,h
-1CDB: 28 06       jr   z,$1CE3
-1CDD: 79          ld   a,c
-1CDE: B2          or   d
-1CDF: E6 01       and  $01
-1CE1: B5          or   l
+
+; Test LEFT (bit 0): check right-edge probes (C' | D') & $01
+1CD9: CB 44       bit  0,h                  ; LEFT direction desired?
+1CDB: 28 06       jr   z,$1CE3              ; if not, skip
+1CDD: 79          ld   a,c                  ; A = top-right probe attribute
+1CDE: B2          or   d                    ; OR with bottom-right probe
+1CDF: E6 01       and  $01                  ; test bit 0 (LEFT block flag)
+1CE1: B5          or   l                    ; accumulate in L
 1CE2: 6F          ld   l,a
-1CE3: 2F          cpl
-1CE4: A4          and  h
-1CE5: C1          pop  bc
-1CE6: C9          ret
-1CE7: 7D          ld   a,l
-1CE8: 1E 00       ld   e,$00
-1CEA: FE 46       cp   $46
-1CEC: 38 08       jr   c,$1CF6
-1CEE: 1E 05       ld   e,$05
-1CF0: FE 8A       cp   $8A
-1CF2: 38 02       jr   c,$1CF6
-1CF4: 1E 0A       ld   e,$0A
-1CF6: 7C          ld   a,h
-1CF7: 06 05       ld   b,$05
-1CF9: 0E 3A       ld   c,$3A
-1CFB: 16 30       ld   d,$30
-1CFD: B9          cp   c
-1CFE: 38 08       jr   c,$1D08
-1D00: 1C          inc  e
-1D01: 08          ex   af,af'
-1D02: 79          ld   a,c
-1D03: 82          add  a,d
-1D04: 4F          ld   c,a
-1D05: 08          ex   af,af'
-1D06: 10 F5       djnz $1CFD
-1D08: EB          ex   de,hl
-1D09: 01 5E 43    ld   bc,$435E
-1D0C: 26 00       ld   h,$00
-1D0E: 09          add  hl,bc
-1D0F: 7E          ld   a,(hl)
-1D10: EB          ex   de,hl
+
+; L now has bits set for blocked directions. Invert to get clear paths.
+1CE3: 2F          cpl                        ; invert: L = allowed direction mask
+1CE4: A4          and  h                     ; AND with original desired direction
+                                             ; result: only desired + unblocked bits survive
+1CE5: C1          pop  bc                    ; restore BC
+1CE6: C9          ret                        ; return A = allowed direction bits
+
+;
+; Map an (X,Y) coordinate pair to an attribute in the 15-zone maze layout grid.
+; The screen is divided into 3 rows (Y-based) x 5 cols (X-based), producing
+; 15 zones. Each zone has an attribute byte stored at MAZE_ZONES+index.
+;
+; See also: WallIndex in iq.asm within Frenzy's source code.
+;
+; Expects:
+; H = X coordinate
+; L = Y coordinate
+;
+; Returns:
+; A = attribute byte from MAZE_ZONES[index]
+; E = grid index (0-14)
+;
+; Grid layout (5 cols x 3 rows):
+;    Row 0 (Y<70):     indices 0-4
+;    Row 1 (70≤Y<138): indices 5-9
+;    Row 2 (Y≥138):    indices 10-14
+;    Within each row, col 0 = X<58, …, col 4 = X≥202.
+
+WALLINDEX:
+1CE7: 7D          ld   a,l                   ; A = Y (major axis for row select)
+1CE8: 1E 00       ld   e,$00                 ; default E = 0 (row 0)
+1CEA: FE 46       cp   $46                   ; Y < 70? (row 0)
+1CEC: 38 08       jr   c,$1CF6               ; yes, skip with E=0
+1CEE: 1E 05       ld   e,$05                 ; no: E = 5 (row 1 offset)
+1CF0: FE 8A       cp   $8A                   ; Y < 138? (row 1)
+1CF2: 38 02       jr   c,$1CF6               ; yes, skip with E=5
+1CF4: 1E 0A       ld   e,$0A                 ; no: E = 10 (row 2 offset)
+
+; E now = zero-based row*5. Next: determine which of the 5 X columns we are in.
+1CF6: 7C          ld   a,h                   ; A = X (minor axis for col select)
+1CF7: 06 05       ld   b,$05                 ; B = 5 columns per row
+1CF9: 0E 3A       ld   c,$3A                 ; C = 58 (first column maximum X boundary)
+1CFB: 16 30       ld   d,$30                 ; D = 48 (step between boundaries)
+
+; Loop: increment E for each X boundary passed
+1CFD: B9          cp   c                     ; X < current boundary?
+1CFE: 38 08       jr   c,$1D08               ; yes → we found our column
+1D00: 1C          inc  e                     ; no → advance to next column (E++)
+1D01: 08          ex   af,af'                ; save X
+1D02: 79          ld   a,c                   ; A = current boundary
+1D03: 82          add  a,d                   ; add step (48) for next boundary
+1D04: 4F          ld   c,a                   ; update boundary
+1D05: 08          ex   af,af'                ; restore X
+1D06: 10 F5       djnz $1CFD                 ; loop for up to 5 columns
+
+; E = final grid index = (row * 5) + col (0-14)
+1D08: EB          ex   de,hl                 ; HL = index
+1D09: 01 5E 43    ld   bc,$435E              ; BC = MAZE_ZONES base address
+1D0C: 26 00       ld   h,$00                 ; HL = unsigned 8-bit index
+1D0E: 09          add  hl,bc                 ; HL = MAZE_ZONES + index
+1D0F: 7E          ld   a,(hl)                ; A = zone attribute byte
+1D10: EB          ex   de,hl                 ; restore original XY to DE
 1D11: C9          ret
+
+;
+; Execute audio control bytecode sequence.
+; Reads bytes from the audio program counter ($0885)
+; and dispatches them via the jump table at $1D31.
+; Called from NMI handler when not in demo mode.
+;
 
 1D12: DD 21 22 1D ld   ix,$1D22
 1D16: ED 4B 85 08 ld   bc,($0885)
 1D1A: CD 22 1D    call $1D22
 1D1D: ED 43 85 08 ld   ($0885),bc
 1D21: C9          ret
+
+;
+; Audio bytecode interpreter. Reads opcode byte from (BC),
+; doubles it for table lookup, then dispatches to the
+; appropriate handler routine via jump table @ $1D31.
+;
+; BC is the bytecode stream pointer on entry and exit.
+;
+; Opcodes handled:
+; 0  = reset audio state (clear $0887 and $0889)
+; 1  = nop (no operation)
+; 2  = REL: add signed byte to BC (relative branch in bytecode)
+; 3  = LOOP: decrement (HL), if non-zero do relative branch back
+; 4  = move byte: (ptr1) → (ptr2), both pointers read from stream
+; 5  = move word: (ptr1) → (ptr2), both pointers read from stream
+; 6  = store immediate byte from stream to (HL)
+; 7  = store immediate word from stream to (HL)
+; 8  = add byte from (ptr1) to (ptr2), both pointers from stream
+; 9  = add word from (ptr1) to (ptr2), both pointers from stream
+; 10 = add immediate byte from stream to (HL)
+; 11 = add immediate word from stream to (HL)
+; 12 = arithmetic shift right (HL) by immediate E bits
+; 13 = 16-bit arithmetic shift right (HL) by immediate E bits
+; 14 = fill (HL) with E bytes read from stream
+; 15 = same as 14 but E *= 2 first
+;
 
 1D22: 0A          ld   a,(bc)
 1D23: 03          inc  bc
@@ -4201,7 +4416,11 @@ STOP_JOB:
 1E89: 18 04       jr   $1E8F
 
 ;
-;
+; Find and resume the next active job in the linked list.
+; Walks the linked job list until it finds an item with
+; bit 0 of TIMER_ITEM.Flags set, then restores the stack
+; pointer from that item and returns, effectively resuming
+; that job's execution context.
 ;
 
 1E8B: FD 2A 72 08 ld   iy,($0872)
@@ -4670,6 +4889,10 @@ SR.TAB:
     04          
     00          
 
+;
+; Initialise a new game room. Clears screen, draws maze walls,
+; creates player and robot VECTORs, sets up timers and sound.
+;
 
 209D: CD 4E 1A    call $1A4E                 ; call CLEAR_SCREEN
 20A0: CD 40 25    call $2540
@@ -5036,6 +5259,14 @@ S.R:
 
 22EB: CD E4 2B    call $2BE4                 ; call TRY_SPEAK_ON_PLAYER_LEAVING_ROOM
 22EE: CD 4E 36    call $364E
+
+;
+; Clear game state between rooms/exits.
+; Clears V.PTR, MAN_PTR, player bolts data,
+; and checks FLIP status.
+;
+; Returns: Zero flag set if upright cabinet
+
 22F1: FD E5       push iy
 22F3: E1          pop  hl
 22F4: FD 74 FF    ld   (iy-$01),h
@@ -5310,10 +5541,11 @@ SEEK:
 ; See also: SETPAT in robot.asm within Frenzy's source code.
 
 SETPAT:
-2436: E6 0F       and  $0F
-2438: C4 6E 1C    call nz,$1C6E
-243B: B9          cp   c
-243C: C8          ret  z
+2436: E6 0F       and  $0F                   ; read direction of robot
+2438: C4 6E 1C    call nz,$1C6E              ; if not standing still, call IQ for the robot to choose a direction. A now = allowed direction of robot
+
+243B: B9          cp   c                     ; has the robot changed direction?                    
+243C: C8          ret  z                     ; no, so exit
 243D: 4F          ld   c,a
 243E: CD 3D 2B    call $2B3D                 ; call SET_VELOCITY. Now DE = offset into a direction table.
 
@@ -5518,6 +5750,13 @@ ROBOT_ANIMATION_TABLES:
     
 253F: 41          ld   b,c
 
+;
+; Draw the maze room walls based on ROOM_X and ROOM_Y.
+; Seeds the RNG with room coordinates, then builds the
+; maze layout by calling drawing helpers and the
+; procedural maze generator at $25EB.
+;
+
 2540: 2A 45 43    ld   hl,($4345)
 2543: 22 5C 43    ld   ($435C),hl
 2546: 3A 79 43    ld   a,($4379)             ; read FLIP
@@ -5585,22 +5824,43 @@ ROBOT_ANIMATION_TABLES:
 25C6: CD 14 23    call $2314                 ; call SHOW_SCORE
 25C9: C9          ret
 
-25CA: CD 62 26    call $2662
+25CA: CD 62 26    call $2662                 ; CALL DRAW_HORIZONTAL_WALL
 25CD: 3E 40       ld   a,$40
 25CF: 84          add  a,h
-25D0: 67          ld   h,a
-25D1: C3 62 26    jp   $2662
-25D4: CD 4C 26    call $264C
-25D7: CD 4C 26    call $264C
+25D0: 67          ld   h,a                   ; X = X + 64
+25D1: C3 62 26    jp   $2662                 ; jump to DRAW_HORIZONTAL_WALL
+25D4: CD 4C 26    call $264C                 ; CALL DRAW_VERTICAL_WALL
+25D7: CD 4C 26    call $264C                 ; CALL DRAW_VERTICAL_WALL
 25DA: 3E 30       ld   a,$30
 25DC: 85          add  a,l
-25DD: 6F          ld   l,a
-25DE: CD 4C 26    call $264C
-25E1: C3 4C 26    jp   $264C
-25E4: 06 10       ld   b,$10
+25DD: 6F          ld   l,a                   ; Y = Y + 48
+25DE: CD 4C 26    call $264C                 ; CALL DRAW_VERTICAL_WALL
+25E1: C3 4C 26    jp   $264C                 ; jump to DRAW_VERTICAL_WALL
+
+;
+; Calculate magic image RAM address for wall drawing.
+;
+; Expects: H = X, L = Y
+; Returns: DE = magic image RAM address
+;
+; See also: RtoAx in showa.asm within Frenzy's source code.
+
+25E4: 06 10       ld   b,$10                 ; magic RAM control bits (XOR mode)
 25E6: CD A3 29    call $29A3                 ; call CALCULATE_MAGIC_IMAGE_RAM_ADDRESS
-25E9: EB          ex   de,hl
+25E9: EB          ex   de,hl                 ; return address in DE
 25EA: C9          ret
+
+;
+; Procedural maze room generator. Uses the seeded RNG
+; to randomly generate wall configurations for the
+; current room. Randomly selects wall segments, doors,
+; and open spaces.
+;
+; Expects:
+; HL = magic image RAM base address
+; IX = pointer to maze attribute data at $435E
+
+CREATE_ROOM:
 25EB: CD 78 26    call $2678                 ; call RANDOM
 25EE: E5          push hl
 25EF: CD 78 26    call $2678                 ; call RANDOM
@@ -5622,64 +5882,92 @@ ROBOT_ANIMATION_TABLES:
 260F: 38 DA       jr   c,$25EB
 2611: DD 23       inc  ix
 2613: C9          ret
-2614: CD 4C 26    call $264C
+2614: CD 4C 26    call $264C                 ; CALL DRAW_VERTICAL_WALL
 2617: DD CB 01 DE set  3,(ix+$01)
 261B: DD CB 06 D6 set  2,(ix+$06)
 261F: C9          ret
+
 2620: 7D          ld   a,l
 2621: D6 30       sub  $30
 2623: 6F          ld   l,a
-2624: CD 4C 26    call $264C
+2624: CD 4C 26    call $264C                 ; CALL DRAW_VERTICAL_WALL
 2627: DD CB 00 DE set  3,(ix+$00)
 262B: DD CB 05 D6 set  2,(ix+$05)
 262F: C9          ret
+
 2630: 7C          ld   a,h
 2631: D6 44       sub  $44
 2633: 67          ld   h,a
-2634: CD 62 26    call $2662
+2634: CD 62 26    call $2662                 ; CALL DRAW_HORIZONTAL_WALL
 2637: DD CB 00 CE set  1,(ix+$00)
 263B: DD CB 01 C6 set  0,(ix+$01)
 263F: C9          ret
-2640: CD 62 26    call $2662
+
+2640: CD 62 26    call $2662                 ; CALL DRAW_HORIZONTAL_WALL
 2643: DD CB 05 CE set  1,(ix+$05)
 2647: DD CB 06 C6 set  0,(ix+$06)
 264B: C9          ret
 
-264C: 06 0C       ld   b,$0C
+;
+; Draw a vertical wall by drawing the wall sprite 12 times,
+; moving downward (Y+4) each step.
+;
+; Expects:
+; H = X coordinate
+; L = Y coordinate
+;
+; Returns:
+; H = X (unchanged)
+; L = Y + 48 (end of the wall)
+;
+DRAW_VERTICAL_WALL:
+264C: 06 0C       ld   b,$0C                 ; 12 copies (12 * 4 = 48 pixels tall)
 264E: C5          push bc
-264F: E5          push hl
-2650: CD E4 25    call $25E4
-2653: 21 9B 26    ld   hl,$269B
+264F: E5          push hl                    ; save (X,Y)
+2650: CD E4 25    call $25E4                 ; get magic RAM address to draw wall
+2653: 21 9B 26    ld   hl,$269B              ; address of WALL_SPRITE_PATTERN
 2656: CD 17 28    call $2817                 ; call DRAW_SPRITE
-2659: E1          pop  hl
+2659: E1          pop  hl                    ; restore (X,Y)
 265A: C1          pop  bc
 265B: 3E 04       ld   a,$04
-265D: 85          add  a,l
+265D: 85          add  a,l                   ; Y += 4 (move down one tile)
 265E: 6F          ld   l,a
-265F: 10 ED       djnz $264E
+265F: 10 ED       djnz $264E                 ; loop 12 times
 2661: C9          ret
-2662: 06 12       ld   b,$12
+
+;
+; Draw a horizontal wall by drawing the wall sprite 18 times,
+; moving rightward (X+4) each step. 
+;
+; Expects:
+; H = X coordinate
+; L = Y coordinate
+;
+; Returns:
+; H = X + 72 (end of the wall)
+; L = Y (unchanged)
+;
+DRAW_HORIZONTAL_WALL:
+2662: 06 12       ld   b,$12                 ; 18 copies (18 * 4 = 72 pixels wide)
 2664: C5          push bc
-2665: E5          push hl
-2666: CD E4 25    call $25E4
-2669: 21 9B 26    ld   hl,$269B
+2665: E5          push hl                    ; save (X,Y)
+2666: CD E4 25    call $25E4                 ; get magic RAM address to draw wall
+2669: 21 9B 26    ld   hl,$269B              ; address of WALL_SPRITE_PATTERN
 266C: CD 17 28    call $2817                 ; call DRAW_SPRITE
-266F: E1          pop  hl
+266F: E1          pop  hl                    ; restore (X,Y)
 2670: C1          pop  bc
 2671: 3E 04       ld   a,$04
-2673: 84          add  a,h
+2673: 84          add  a,h                   ; X += 4 (move right one tile)
 2674: 67          ld   h,a
-2675: 10 ED       djnz $2664
+2675: 10 ED       djnz $2664                 ; loop 18 times
 2677: C9          ret
 
 
-;
 ; Generate a random number.
 ;
 ; Returns: A = random number
 ; 
-; See alsoL: RANDOM contained within demo.asm in Frenzy's source code.
-
+; See also: RANDOM contained within demo.asm in Frenzy's source code.
 RANDOM:
 2678: E5          push hl
 2679: 2A 5C 43    ld   hl,($435C)            ; load HL with RNG_SEED         
@@ -5697,24 +5985,31 @@ RANDOM:
 268B: C9          ret
 
 
-268C: 05          dec  b
-268D: 04          inc  b
-268E: 04          inc  b
-268F: 04          inc  b
-2690: 06 01       ld   b,$01
-2692: 00          nop
-2693: 00          nop
-2694: 00          nop
-2695: 02          ld   (bc),a
-2696: 09          add  hl,bc
-2697: 08          ex   af,af'
-2698: 08          ex   af,af'
-2699: 08          ex   af,af'
-269A: 0A          ld   a,(bc)
-269B: 01 04 F0    ld   bc,$F004
-269E: F0          ret  p
-269F: F0          ret  p
-26A0: F0          ret  p
+; 15-byte maze zone attribute grid (5 cols x 3 rows).
+; Initialised by an LDIR @ $2567 during room initialisation:
+;
+;   $268C: 05 04 04 04 06    ; row 0, cols 0-4 (X<70)
+;   $2691: 01 00 00 00 02    ; row 1, cols 0-4 (70≤X<138)
+;   $2696: 09 08 08 08 0A    ; row 2, cols 0-4 (X≥138)
+;
+; $1CE7 maps (X,Y) to index = (row * 5) + col, where col 0=Y<58, col 4=Y≥202.
+;
+; Bit 0 ($01) = wall on LEFT edge  | Bit 1 ($02) = wall on RIGHT edge
+; Bit 2 ($04) = wall on TOP edge   | Bit 3 ($08) = wall on BOTTOM edge
+;
+; Confirmed by: $25EB (CREATE_ROOM) and $1C6E (IQ).
+
+BLOCKED_DIRECTIONS:
+268C: 
+    05 04 04 04 06 
+    01 00 00 00 02
+    09 08 08 08 0A
+
+WALL_SPRITE_PATTERN:
+269B: 
+    01 04 
+    F0 F0 F0 F0
+
 26A1: 02          ld   (bc),a
 26A2: 04          inc  b
 26A3: FF          rst  $38
@@ -6017,12 +6312,13 @@ MOVE_ANIMATE_VECTOR:
 27F1: 32 78 43    ld   ($4378),a             ; set PLAYER_COLOUR
 27F4: C9          ret
 
-
 ;
+; Process the linked timer list.
+; Decrements TIMER_ITEM.Delay for each entry.
+; When Delay reaches 0, sets bit 0 (active flag)
+; and clears bit 1 (counting flag).
 ;
-;
-;
-;
+; Walks the list via the linked list pointers.
 
 27F5: 2A 72 08    ld   hl,($0872)            ; load HL with contents of TIMER_LIST_PTR
 27F8: 7C          ld   a,h
@@ -6529,8 +6825,8 @@ RTOAX:
 
 ; Expects:
 ; B = bits to write to magicram_control_w
-; H = Y coordinate
-; L = X coordinate
+; H = X coordinate
+; L = Y coordinate
 ;
 ; Returns:
 ; A = magic image RAM control byte
@@ -6874,10 +7170,14 @@ SHOWO:
 ; Set the direction of a VECTOR.
 ;
 ; Expects: 
-; A = Direction   
-; C = Direction tracker  
+; A = Direction (DURL bits)   
+; C = Previous direction tracker  
 ; IX = pointer to a VECTOR structure
-; function SETDIR in super.asm within Frenzy's source code.
+;
+; Returns: C = new direction if changed
+;
+; If direction has changed, falls through to SET_VELOCITY.
+; See also: SETDIR in super.asm within Frenzy's source code.
 
 SETDIR:
 2B39: E6 0F       and  $0F                    ; mask in DURL bits
@@ -6915,6 +7215,15 @@ SET_VELOCITY:
 2B53: C9          ret
 
 
+;
+; Set timer item delay and schedule job, then check
+; if the VECTOR at IX has been hit.
+;
+; Expects:
+; A = delay value
+; IX = pointer to VECTOR structure
+;
+; Returns: Zero flag set if STATUS_BIT_HIT not set
 
 2B54: 2A 72 08    ld   hl,($0872)
 2B57: 36 82       ld   (hl),$82
@@ -7253,7 +7562,12 @@ INTRUDER_ALERT_INTRUDER_ALERT:
     FF          ; Terminator byte
 
 
-
+;
+; Handle game over / high score processing.
+; Updates CMOS total score with player's final score,
+; then inserts the score into the high score table
+; if it qualifies.
+;
 
 2C51: CD 34 23    call $2334                 ; call GET_PLAYER_SCORE_PTR
 2C54: E5          push hl
@@ -7369,7 +7683,7 @@ INTRUDER_ALERT_INTRUDER_ALERT:
 2CF9: 2F          cpl
 2CFA: BC          cp   h
 2CFB: 2F          cpl
-2CFC: 06 00       ld   b,$00
+2CFC: 06 00       ld   b,$00                 ; bits to write to magicram_control_w
 2CFE: 21 78 60    ld   hl,$6078
 2D01: CD A3 29    call $29A3                 ; call CALCULATE_MAGIC_IMAGE_RAM_ADDRESS
 2D04: EB          ex   de,hl
@@ -7517,6 +7831,12 @@ INCREMENT_BY_1:
 2DCB: C1          pop  bc
 2DCC: F1          pop  af
 2DCD: C9          ret
+
+;
+; Read controls for the current player.
+; Reads P1 if upright cabinet, P2 if cocktail.
+;
+; Returns: A = control port bits
 
 2DCE: 3A 79 43    ld   a,($4379)             ; read FLIP	
 2DD1: B7          or   a
@@ -8573,8 +8893,11 @@ SRFIRE#:
 3535: E4 02 9F    call po,$9F02
 
 
+;
+; Play the "extra life awarded" sound.
+; See also: START macro in NMI.ASM within Frenzy's source code.
 
-
+SXLIFE:
 3538: 21 89 08    ld   hl,$0889
 353B: F5          push af
 353C: 3E 02       ld   a,$02
@@ -8681,153 +9004,189 @@ SET_COLOUR_ATTRS_35AF:
 
 35B7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35BA: 
-    00
-    00
-    05
-    20 
-    AA
+    00          ; offset LSB
+    00          ; offset MSB ($0000 = row 0, col 0)
+    05          ; lines = 5 (20 pixel lines)
+    20          ; width = 32 bytes
+    AA          ; colour = $AA
 35BF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35C2: 
-    A0
-    00
-    29
-    20 
-    11
+    A0          ; offset LSB
+    00          ; offset MSB ($00A0 = row 5, col 0)
+    29          ; lines = 41 (164 pixel lines)
+    20          ; width = 32 bytes
+    11          ; colour = $11
 35C7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35CA: 
-    A0
-    00
-    29
-    09
-    99
+    A0          ; offset LSB
+    00          ; offset MSB ($00A0 = row 5, col 0)
+    29          ; lines = 41 (164 pixel lines)
+    09          ; width = 9 bytes
+    99          ; colour = $99
 35CF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35D2: 
-    A9
-    00
-    29
-    08
-    BB
+    A9          ; offset LSB
+    00          ; offset MSB ($00A9 = row 5, col 9)
+    29          ; lines = 41 (164 pixel lines)
+    08          ; width = 8 bytes
+    BB          ; colour = $BB
 35D7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35DA: 
-    B0       
-    00       
-    29       
-    10 
-    55       
+    B0          ; offset LSB
+    00          ; offset MSB ($00B0 = row 5, col 16)
+    29          ; lines = 41 (164 pixel lines)
+    10          ; width = 16 bytes
+    55          ; colour = $55
 35DF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35E2: 
-    C0
-    05
-    0A
-    20 
-    77
+    C0          ; offset LSB
+    05          ; offset MSB ($05C0 = row 46, col 0)
+    0A          ; lines = 10 (40 pixel lines)
+    20          ; width = 32 bytes
+    77          ; colour = $77
 35E7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35EA: 
-    80
-    06 
-    04
-    0A
-    AA
+    80          ; offset LSB
+    06          ; offset MSB ($0680 = row 52, col 0)
+    04          ; lines = 4 (16 pixel lines)
+    0A          ; width = 10 bytes
+    AA          ; colour = $AA
 35EF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35F2: 
-    96
-    06 
-    04
-    0A
-    DD
+    96          ; offset LSB
+    06          ; offset MSB ($0696 = row 52, col 22)
+    04          ; lines = 4 (16 pixel lines)
+    0A          ; width = 10 bytes
+    DD          ; colour = $DD
 35F7: C9          ret
 
 
+;
+; Fill large area of colour RAM with white (for diagnostic / test screens).
+; See also: C.DIPS in color.asm within Frenzy's source code.
+;
 COLOUR_FILL_WHITE:
 35F8: CD 57 36    call $3657                 ; call COLOUR_FILL
 35FB: 
-    00          
-    00          
-    38 
-    20       
-    FF          
+    00          ; offset LSB
+    00          ; offset MSB ($0000 = row 0, col 0)
+    38          ; lines = 56 (224 pixel lines = full screen)
+    20          ; width = 32 bytes
+    FF          ; colour = $FF
 3600: C9          ret
 
+;
+; Set colour attributes for "insert coin" message area
+; See also: C.LI in color.asm within Frenzy's source code.
+;
+
+SET_INSERT_COIN_COLOUR_ATTRS:
 3601: CD 57 36    call $3657                 ; call COLOUR_FILL
 3604: 
-    E0          
-    05          
-    04          
-    20 
-    33       
+    E0          ; offset LSB
+    05          ; offset MSB ($05E0 = row 47, col 0)
+    04          ; lines = 4 (16 pixel lines)
+    20          ; width = 32 bytes
+    33          ; colour = $33
 3609: C9          ret
 
+;
+; Set colour attributes for "press start" message area (1 credit)
+; See also: C.L1 / C.L2 in color.asm within Frenzy's source code.
+;
+
+SET_PRESS_START_1CRED_COLOUR_ATTRS:
 360A: CD 57 36    call $3657                 ; call COLOUR_FILL
 360D: 
-    E0          
-    05          
-    04          
-    20 
-    99       
+    E0          ; offset LSB
+    05          ; offset MSB ($05E0 = row 47, col 0)
+    04          ; lines = 4 (16 pixel lines)
+    20          ; width = 32 bytes
+    99          ; colour = $99
 3612: C9          ret
 
+;
+; Set colour attributes for "press start" message area (2 or more credits)
+; See also: C.L1 / C.L2 in color.asm within Frenzy's source code.
+;
+
+SET_PRESS_START_MULTICRED_COLOUR_ATTRS:
 3613: CD 57 36    call $3657                 ; call COLOUR_FILL
 3616: 
-    E0          
-    05          
-    04          
-    20 
-    66       
+    E0          ; offset LSB
+    05          ; offset MSB ($05E0 = row 47, col 0)
+    04          ; lines = 4 (16 pixel lines)
+    20          ; width = 32 bytes
+    66          ; colour = $66
 361B: C9          ret
 
+;
+; Set colour attributes for high score / congratulations screen
+; See also: C.HIGH in color.asm within Frenzy's source code.
+;
+
+SET_HI_SCORE_COLOUR_ATTRS:
 361C: CD 57 36    call $3657                 ; call COLOUR_FILL
 361F: 
-    00          
-    00          
-    08          
-    20 
-    BB       
+    00          ; offset LSB
+    00          ; offset MSB ($0000 = row 0, col 0)
+    08          ; lines = 8 (32 pixel lines)
+    20          ; width = 32 bytes
+    BB          ; colour = $BB
 3624: CD 57 36    call $3657                 ; call COLOUR_FILL
 3627: 
-    00    
-    01 
-    10 
-    20    
-    66
+    00          ; offset LSB
+    01          ; offset MSB ($0100 = row 8, col 0)
+    10          ; lines = 16 (64 pixel lines)
+    20          ; width = 32 bytes
+    66          ; colour = $66
 362C: CD 57 36    call $3657                 ; call COLOUR_FILL
 362F:
-    00
-    03
-    04
-    20 
-    FF
+    00          ; offset LSB
+    03          ; offset MSB ($0300 = row 24, col 0)
+    04          ; lines = 4 (16 pixel lines)
+    20          ; width = 32 bytes
+    FF          ; colour = $FF
 3634: CD 57 36    call $3657                 ; call COLOUR_FILL
 3637:
-    80
-    03
-    1C
-    20 
-    AA
+    80          ; offset LSB
+    03          ; offset MSB ($0380 = row 28, col 0)
+    1C          ; lines = 28 (112 pixel lines)
+    20          ; width = 32 bytes
+    AA          ; colour = $AA
 363C: C9          ret
 
+;
+; Set colour attributes for bookkeeping screen
+; See also: C.BOOKS in color.asm within Frenzy's source code.
+;
 363D: CD 57 36    call $3657                 ; call COLOUR_FILL
 3640:
-    00
-    00
-    2F
-    20 
-    CC
+    00          ; offset LSB
+    00          ; offset MSB ($0000 = row 0, col 0)
+    2F          ; lines = 47 (188 pixel lines)
+    20          ; width = 32 bytes
+    CC          ; colour = $CC
 3645: CD 57 36    call $3657                 ; call COLOUR_FILL
 3648: 
-    E0
-    05
-    09
-    20 
-    AA
+    E0          ; offset LSB
+    05          ; offset MSB ($05E0 = row 47, col 0)
+    09          ; lines = 9 (36 pixel lines)
+    20          ; width = 32 bytes
+    AA          ; colour = $AA
 364D: C9          ret
 
+;
+; Set colour attributes for moving between rooms
+; See also: C.MOVE in color.asm within Frenzy's source code.
+;
 364E: CD 57 36    call $3657                 ; call COLOUR_FILL 
 3651: 
-    00
-    00
-    34
-    20 
-    44
+    00          ; offset LSB
+    00          ; offset MSB ($0000 = row 0, col 0)
+    34          ; lines = 52 (208 pixel lines)
+    20          ; width = 32 bytes
+    44          ; colour = $44
 3656: C9          ret
 
 
@@ -8880,7 +9239,7 @@ COLOUR_FILL:
 3678: 23          inc  hl
 3679: E5          push hl
 367A: EB          ex   de,hl
-367B: 20 11       jr   nz,$368E
+367B: 20 11       jr   nz,$368E              ; if not upright cabinet, goto $368E
 
 ; upright cabinet
 ; HL = start of colour attribute RAM to fill 
@@ -8888,20 +9247,21 @@ COLOUR_FILL:
 ; A' = count of columns to fill
 ; C = count of rows to fill 
 367D: 11 20 00    ld   de,$0020              ; sizeof a row of colour attributes           
-3680: 08          ex   af,af'
+3680: 08          ex   af,af'                ; now A = count of columns to fill
 3681: 47          ld   b,a                   ; load b with count of attribute cells to fill
-3682: 08          ex   af,af'
+3682: 08          ex   af,af'                ; now A = colour to fill cells with
 3683: E5          push hl                    
 3684: 77          ld   (hl),a                ; write colour to cell
 3685: 23          inc  hl
 3686: 10 FC       djnz $3684                 ; repeat until all cells for row are coloured
 3688: E1          pop  hl
-3689: 19          add  hl,de                 ; bump HL 
-368A: 0D          dec  c
+3689: 19          add  hl,de                 ; bump HL to next row
+368A: 0D          dec  c                     ; decrement row counter
 368B: 20 F3       jr   nz,$3680              ; repeat until all rows done
 368D: C9          ret
 
 ; cocktail cabinet
+; Ignored - I don't care about cocktail cabinets
 368E: 11 E0 FF    ld   de,$FFE0
 3691: 08          ex   af,af'
 3692: 47          ld   b,a
@@ -8916,88 +9276,99 @@ COLOUR_FILL:
 369C: 20 F3       jr   nz,$3691
 369E: C9          ret
 
+;
+; Colour the walls of the room based on difficulty table
+; 
+; See also: C.WALLS in color.asm within Frenzy's source code.
+;
+
+C.WALLS:
 369F: CD 57 36    call $3657                 ; call COLOUR_FILL
 36A2: 
-    80          
-    06 
-    04
-    20 
-    77
+    80          ; offset LSB
+    06          ; offset MSB ($0680 = row 52, col 0)
+    04          ; lines = 4 (16 pixel lines)
+    20          ; width = 32 bytes
+    77          ; colour = $77
 
-36A7: CD E7 35    call $35E7
+36A7: CD E7 35    call $35E7                 ; fill bottom info area coloured boxes
 36AA: CD 34 23    call $2334                 ; call GET_PLAYER_SCORE_PTR  
-36AD: EB          ex   de,hl
-36AE: 01 05 00    ld   bc,$0005
-36B1: 13          inc  de
-36B2: 1A          ld   a,(de)
-36B3: 08          ex   af,af'
-36B4: 1B          dec  de
-36B5: 1A          ld   a,(de)
-36B6: B7          or   a
-36B7: 21 94 37    ld   hl,$3794
-36BA: 28 0F       jr   z,$36CB
-36BC: E6 0F       and  $0F
-36BE: 67          ld   h,a
-36BF: 08          ex   af,af'
-36C0: E6 F0       and  $F0
-36C2: B4          or   h
-36C3: 07          rlca
-36C4: 07          rlca
+36AD: EB          ex   de,hl                 ; DE = pointer to player score (3 bytes BCD)
+36AE: 01 05 00    ld   bc,$0005              ; BC = size of each difficulty table entry
+36B1: 13          inc  de                    ; skip BCD byte 0 (hundred-thousands & ten-thousands)
+36B2: 1A          ld   a,(de)                ; read BCD byte 1 (thousands & hundreds)
+36B3: 08          ex   af,af'                ; save byte 1 in alternate register
+36B4: 1B          dec  de                    ; point back to BCD byte 0
+36B5: 1A          ld   a,(de)                ; read BCD byte 0 (hundred-thousands & ten-thousands)
+36B6: B7          or   a                     ; test if score < 10,000 (byte 0 zero)
+36B7: 21 94 37    ld   hl,$3794              ; HL = pointer to LOW_DIFFICULTY_TABLE (score < 10,000)
+36BA: 28 0F       jr   z,$36CB               ; if < 10,000, use low table (AF' = byte 1 value)
+
+; Score is more than 10,000
+36BC: E6 0F       and  $0F                   ; keep ten-thousands digit from byte 0
+36BE: 67          ld   h,a                   ; save ten-thousands in H
+36BF: 08          ex   af,af'                ; retrieve byte 1 (thousands & hundreds) from AF'
+36C0: E6 F0       and  $F0                   ; keep thousands digit from byte 1
+36C2: B4          or   h                     ; A = [thousands][ten-thousands]
+36C3: 07          rlca                       ; rotate left 4 times to
+36C4: 07          rlca                       ;  produce A = [ten-thousands][thousands]
 36C5: 07          rlca
 36C6: 07          rlca
-36C7: 21 BC 37    ld   hl,$37BC
-36CA: 08          ex   af,af'
-36CB: 08          ex   af,af'
-36CC: BE          cp   (hl)
-36CD: 38 06       jr   c,$36D5
-36CF: 08          ex   af,af'
-36D0: 09          add  hl,bc
-36D1: 7E          ld   a,(hl)
-36D2: B7          or   a
-36D3: 20 F6       jr   nz,$36CB
-36D5: 23          inc  hl
-36D6: 7E          ld   a,(hl)
+36C7: 21 BC 37    ld   hl,$37BC              ; HL =pointer to NORMAL_DIFFICULTY_TABLE (score >= 10,000)
+36CA: 08          ex   af,af'                ; save difficulty index in AF'
+
+36CB: 08          ex   af,af'                ; retrieve difficulty index (byte 1 if score<10k, else combined)
+36CC: BE          cp   (hl)                  ; compare with table entry threshold
+36CD: 38 06       jr   c,$36D5               ; if index < threshold, found entry
+36CF: 08          ex   af,af'                ; save difficulty index
+36D0: 09          add  hl,bc                 ; advance HL by 5 bytes to next entry
+36D1: 7E          ld   a,(hl)                ; read threshold of next entry
+36D2: B7          or   a                     ; is it zero? (end marker)
+36D3: 20 F6       jr   nz,$36CB              ; if not end, keep searching
+36D5: 23          inc  hl                    ; skip threshold byte, point to parameter data
+36D6: 7E          ld   a,(hl)                ; read byte 1: max robot bolts count
 36D7: 23          inc  hl
 36D8: 32 4B 43    ld   ($434B),a             ; set RBOLTS   
-36DB: 7E          ld   a,(hl)
+36DB: 7E          ld   a,(hl)                ; read byte 2: robot bolt slot offset
 36DC: 23          inc  hl
-36DD: 32 7A 43    ld   ($437A),a
-36E0: 7E          ld   a,(hl)
+36DD: 32 7A 43    ld   ($437A),a             ; set bolt slot processing modifier
+36E0: 7E          ld   a,(hl)                ; read byte 3: robot recharge wait
 36E1: 23          inc  hl
 36E2: 32 4D 43    ld   ($434D),a             ; set RWAIT
-36E5: 4E          ld   c,(hl)
+36E5: 4E          ld   c,(hl)                ; read byte 4: robot colour (used for wall colouring)
+
 36E6: 3A 79 43    ld   a,($4379)             ; read FLIP	
 36E9: B7          or   a                     ; set zero flag if upright cabinet
-36EA: DD 21 00 81 ld   ix,$8100
-36EE: 21 00 44    ld   hl,$4400              ; load HL with address of screen image RAM
-36F1: 28 07       jr   z,$36FA
+36EA: DD 21 00 81 ld   ix,$8100              ; IX = colour attribute RAM base (upright)
+36EE: 21 00 44    ld   hl,$4400              ; HL = screen image RAM base (upright)
+36F1: 28 07       jr   z,$36FA               ; if upright, skip cocktail setup
 
-; cocktail cabinet
-36F3: DD 21 80 81 ld   ix,$8180
-36F7: 21 00 46    ld   hl,$4600
+; cocktail cabinet colour/screen RAM base
+36F3: DD 21 80 81 ld   ix,$8180              ; IX = colour RAM (offset for flipped cocktail)
+36F7: 21 00 46    ld   hl,$4600              ; HL = screen RAM (offset for flipped cocktail)
 
 ; both cocktail and upright
-36FA: 3E 34       ld   a,$34
-36FC: 08          ex   af,af'
-36FD: 06 20       ld   b,$20
-36FF: 7E          ld   a,(hl)
-3700: 23          inc  hl
-3701: 5F          ld   e,a
-3702: E6 44       and  $44
-3704: 57          ld   d,a
-3705: 7B          ld   a,e
-3706: 2F          cpl
-3707: A1          and  c
-3708: B2          or   d
-3709: DD 77 00    ld   (ix+$00),a
-370C: DD 23       inc  ix
-370E: 10 EF       djnz $36FF
-3710: 11 60 00    ld   de,$0060
-3713: 19          add  hl,de
-3714: 08          ex   af,af'
-3715: 3D          dec  a
-3716: 20 E4       jr   nz,$36FC
-3718: C9          ret
+36FA: 3E 34       ld   a,$34                 ; A = 52 rows of colour attributes to process
+36FC: 08          ex   af,af'               ; save row counter in AF'
+36FD: 06 20       ld   b,$20                 ; B = 32 bytes per row (full screen width)
+36FF: 7E          ld   a,(hl)                ; read byte from screen RAM
+3700: 23          inc  hl                    ; advance screen RAM pointer
+3701: 5F          ld   e,a                   ; save screen byte in E
+3702: E6 44       and  $44                   ; test wall edge bits (bit 2 and bit 6)
+3704: 57          ld   d,a                   ; D = non-zero if wall pixel detected
+3705: 7B          ld   a,e                   ; get original screen byte back
+3706: 2F          cpl                        ; invert = open space bits
+3707: A1          and  c                     ; AND with robot colour -> coloured pixel if open
+3708: B2          or   d                     ; OR in wall detection -> grey tint if wall
+3709: DD 77 00    ld   (ix+$00),a            ; write composite colour to attribute RAM
+370C: DD 23       inc  ix                    ; advance colour RAM pointer
+370E: 10 EF       djnz $36FF                 ; loop for all 32 bytes in this row
+3710: 11 60 00    ld   de,$0060              ; DE = 96 bytes (3 screen rows)
+3713: 19          add  hl,de                 ; skip 3 screen rows (we colour 4 at a time)
+3714: 08          ex   af,af'               ; retrieve row counter
+3715: 3D          dec  a                     ; decrement row counter
+3716: 20 E4       jr   nz,$36FC              ; loop until all 52 rows processed
+3718: C9          ret                        ; end of C.WALLS
 
 
 ;
@@ -9107,6 +9478,7 @@ COLOUR_MAN:
 3793: C9          ret
 
 
+LOW_DIFFICULTY_TABLE:
 3794: 03          inc  bc
 3795: 00          nop
 3796: 00          nop
@@ -9140,6 +9512,8 @@ COLOUR_MAN:
 37B7: 00          nop
 37B8: 01 01 32    ld   bc,$3201
 37BB: FF          rst  $38
+
+NORMAL_DIFFICULTY_TABLE:
 37BC: 10 01       djnz $37BF
 37BE: 01 2D FF    ld   bc,$FF2D
 37C1: 11 02 02    ld   de,$0202

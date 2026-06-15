@@ -1920,28 +1920,31 @@ WAIT_FOR_1P_FIRE_BUTTON:
 
 
 ; pattern table for player standing still. (1 frame)
+; See also PLAYER_ANIMATION_TABLE entry 0 at $2053.
 1046: 
-    10 BF          
+    10 BF          ; sprite pattern at $10BF
     00          
-    46 10 
+    46 10           ; loop back to $1046
 
-; pattern table for player moving up
+; pattern table for player moving up/up-right/right/down-right/down
+; See also PLAYER_ANIMATION_TABLE entries 1-4,8 at $2053.
 104B: 
-    10 AD          
-    10 9B       
-    10 89       
-    10 9B       
+    10 AD          ; sprite pattern at $10AD
+    10 9B          ; sprite pattern at $109B
+    10 89          ; sprite pattern at $1089
+    10 9B          ; sprite pattern at $109B (cycle)
     00          
-    4B 10 
+    4B 10           ; loop back to $104B
 
-; pattern table for player moving left
+; pattern table for player moving down-left/left/up-left
+; See also PLAYER_ANIMATION_TABLE entries 5-7 at $2053.
 1056: 
-    13 B5          
-    13 A3          
-    13 91          
-    13 A3          
+    13 B5          ; sprite pattern at $13B5
+    13 A3          ; sprite pattern at $13A3
+    13 91          ; sprite pattern at $1391
+    13 A3          ; sprite pattern at $13A3 (cycle)
     00          
-    56 10 
+    56 10           ; loop back to $1056
 
 ; Player shooting up, right pattern table (1 frame)
 1061: 
@@ -2312,15 +2315,18 @@ WAIT_FOR_1P_FIRE_BUTTON:
 12AF: 7E          ld   a,(hl)
 12B0: DB FF       in   a,($FF)
 12B2: 7E          ld   a,(hl)
-12B3: 12          ld   (de),a
-
-
-
-12B4: D0 12
-12B6: BE 12
-12B8: E3 12
-12BA: F6 00       or   $00
-12BC: B3 12
+;
+; Player death/electrocution animation pattern table
+; 4 frames: $12D0 → $12BE → $12E3 → $12F6, then loops.
+; See also PLAYER_ANIMATION_TABLE entry 9 at $2053.
+;
+12B3: 
+    D0 12       ; sprite pattern at $12D0 (normal standing)
+    BE 12       ; sprite pattern at $12BE (smaller/shrinking)
+    E3 12       ; sprite pattern at $12E3 (disintegrating)
+    F6 12       ; sprite pattern at $12F6 (nearly gone)
+    00
+    B3 12       ; loop back to $12B3
 
 
 12BE: 
@@ -4614,11 +4620,11 @@ FIRE:
 ; Fire a bolt
 1F21: CD BD 33    call $33BD                 ; play bolt shooting sound
 1F24: 4F          ld   c,a                   ; preserve DURL bits in A
-1F25: 21 42 20    ld   hl,$2042              ; load HL with address of D.TAB
+1F25: 21 42 20    ld   hl,$2042              ; load HL with address of DIRECTION_OFFSET_TABLE
 1F28: 06 00       ld   b,$00
 1F2A: 50          ld   d,b
-1F2B: 09          add  hl,bc                 ; now HL points to offset held in D.TAB
-1F2C: 5E          ld   e,(hl)                ; read offset from D.TAB
+1F2B: 09          add  hl,bc                 ; now HL points to offset held in DIRECTION_OFFSET_TABLE
+1F2C: 5E          ld   e,(hl)                ; read offset from DIRECTION_OFFSET_TABLE
 1F2D: 21 67 20    ld   hl,$2067              ; load HL with address of SR.TAB
 1F30: 19          add  hl,de
 1F31: 19          add  hl,de
@@ -4690,18 +4696,33 @@ FIRE:
 
 CHANGE_PLAYER_DIRECTION:
 1F91: 4F          ld   c,a                   ; set C to "track" stick movement
-1F92: E6 0F       and  $0F
+1F92: E6 0F       and  $0F                   ; mask to DURL direction bits
+
+;
+; CDIR — Set the player's animation pattern and velocity for a new
+; direction.
+; 
+; Updates the following VECTOR fields:
+;    VECTOR.V.X, 
+;    VECTOR.V.Y, 
+;    VECTOR.D.P.H  
+;    VECTOR.D.P.L  
+;
+; Returns:
+; DE = offset read from DIRECTION_OFFSET_TABLE in DE.
+;
+; See also: CHANGE within man.asm in Frenzy's source code.
 
 CDIR:
-1F94: CD 3D 2B    call $2B3D                 ; call SET_VELOCITY. Now DE = offset into P.TAB table
-1F97: 21 53 20    ld   hl,$2053              ; load HL with address of P.TAB
-1F9A: 19          add  hl,de                 ; HL now is pointer to pattern table for player's direction
-1F9B: 7E          ld   a,(hl)                ; 
+1F94: CD 3D 2B    call $2B3D                 ; call SET_VELOCITY. Returns DE = offset read from DIRECTION_OFFSET_TABLE.
+1F97: 21 53 20    ld   hl,$2053              ; HL = address of PLAYER_ANIMATION_TABLE
+1F9A: 19          add  hl,de                 ; HL = PLAYER_ANIMATION_TABLE + offset
+1F9B: 7E          ld   a,(hl)                ; read pattern pointer (lo)
 1F9C: 23          inc  hl
-1F9D: 66          ld   h,(hl)
+1F9D: 66          ld   h,(hl)                ; read pattern pointer (hi)
 1F9E: F3          di
-1F9F: DD 77 0A    ld   (ix+$0a),a
-1FA2: DD 74 0B    ld   (ix+$0b),h
+1F9F: DD 77 0A    ld   (ix+$0a),a            ; set VECTOR.D.P.L
+1FA2: DD 74 0B    ld   (ix+$0b),h            ; set VECTOR.D.P.H
 1FA5: FB          ei
 1FA6: C9          ret
 
@@ -4822,14 +4843,14 @@ MAN_INIT:
 ; For an example, let's look at how this table is used to calculate an offset into the robot shoot table S.TAB .
 ; Let's say we have DURL bits of 5, which is LEFT (1) + UP (4).
 ; 
-; The 5th entry (with a zero based index) of the D.TAB table is $0E (14 decimal).
+; The 5th entry (with a zero based index) of the DIRECTION_OFFSET_TABLE table is $0E (14 decimal).
 ; The logic at $28EC multiplies this value by 3 to give 42 decimal. 
 ; 42 bytes into S.TAB @ $296E you have the entry for shooting UP + LEFT. 
 ;
 ; Remarks:
 ; See also D.TAB within man.asm in Frenzy's source code.
 
-D.TAB:
+DIRECTION_OFFSET_TABLE:
 2042: 
     00            ; no move   
     0C            ; left
@@ -4851,23 +4872,45 @@ D.TAB:
 
 
 ;
-; Player sprite pattern (animation) tables
+; PLAYER_ANIMATION_TABLE — maps each direction to the player's animation
+; table. There are 10 entries, one per possible offset from
+; DIRECTION_OFFSET_TABLE.
+;
+; How the lookup works:
+;
+;   1. DURL bits (left/right/up/down) form a direction index from 0 to 16.
+;   2. DIRECTION_OFFSET_TABLE[direction index] returns a byte offset.
+;   3. That offset is used directly here: read the 2-byte pointer at
+;      PLAYER_ANIMATION_TABLE + offset.
+;   4. The pointer is the address of an animation table — a list of
+;      sprite-pattern pointers ending with a zero byte then a self-loop.
+;
+; Example — player moving LEFT (direction index = 1):
+;
+;   DIRECTION_OFFSET_TABLE[1] = $0C (12 decimal)
+;   PLAYER_ANIMATION_TABLE + $0C points to two bytes: $56, $10, which form address $1056
+;   $1056 is the "moving left" animation table (a 4-frame cycle).
+;
+; Note that offsets $02 through $10 (moving up/right/down) all share
+; the same animation table at $104B, and offsets $0A through $0E
+; (moving left) all share $1056. This is because the player sprite
+; only has two directional movement animations — "up" and "left".
 ;
 ; Remarks:
 ; See also P.TAB within man.asm in Frenzy's source code.
 
-P.TAB:
+PLAYER_ANIMATION_TABLE:
 2053: 
-    46 10 
-    4B 10 
-    4B 10 
-    4B 10 
-    4B 10 
-    56 10 
-    56 10 
-    56 10 
-    4B 10 
-    B3 12          
+    46 10       ; $1046 = stand still
+    4B 10       ; $104B = move up-right
+    4B 10       ; $104B = move right
+    4B 10       ; $104B = move down-right
+    4B 10       ; $104B = move down
+    56 10       ; $1056 = move down-left
+    56 10       ; $1056 = move left
+    56 10       ; $1056 = move up-left
+    4B 10       ; $104B = move up
+    B3 12       ; $12B3 = death / electrocution
 
 
 ;
@@ -5625,7 +5668,7 @@ SETPAT:
 243B: B9          cp   c                     ; has the robot changed direction?                    
 243C: C8          ret  z                     ; no, so exit
 243D: 4F          ld   c,a
-243E: CD 3D 2B    call $2B3D                 ; call SET_VELOCITY. Now DE = offset into a direction table.
+243E: CD 3D 2B    call $2B3D                 ; call SET_VELOCITY. Now DE = offset read from DIRECTION_OFFSET_TABLE.
 
 ; Set pointer to pattern table for robot on room start
 2441: 21 2D 25    ld   hl,$252D              ; load HL with address of ROBOT_ANIMATION_TABLES
@@ -5824,7 +5867,7 @@ BLAM:
 ; See also: M.TAB within super.asm in Frenzy's source code.
 ;
 
-M.TAB:
+VELOCITY_TABLE:
 2519: 
     00 00       ; No direction. Will not affect X,Y coordinates        
     01 FF       ; Up right (XDelta = 1, YDelta =-1)
@@ -6685,12 +6728,12 @@ SHOOT:
 28DC: 18 00       jr   $28DE
 
 ; C = DURL bits for robot's bolt
-28DE: 06 00       ld   b,$00                 ; zero B so that BC = index into D.TAB table
+28DE: 06 00       ld   b,$00                 ; zero B so that BC = index into DIRECTION_OFFSET_TABLE table
 28E0: E5          push hl
 28E1: CD E7 34    call $34E7                 ; call SRFIRE# to make robot shoot noise
-28E4: 21 42 20    ld   hl,$2042              ; load HL with address of D.TAB table
-28E7: 09          add  hl,bc                 ; now HL = pointer to offset in D.TAB table
-28E8: 4E          ld   c,(hl)                ; now BC = offset read from D.TAB table                
+28E4: 21 42 20    ld   hl,$2042              ; load HL with address of DIRECTION_OFFSET_TABLE table
+28E7: 09          add  hl,bc                 ; now HL = pointer to offset in DIRECTION_OFFSET_TABLE table
+28E8: 4E          ld   c,(hl)                ; now BC = offset read from DIRECTION_OFFSET_TABLE table                
 28E9: 21 44 29    ld   hl,$2944              ; load HL with address of S.TAB table
 28EC: 09          add  hl,bc                 ; HL = HL + (BC * 3)
 28ED: 09          add  hl,bc
@@ -7299,7 +7342,7 @@ SETDIR:
 ; IX = pointer to VECTOR structure 
 ;
 ; Returns:
-; DE = offset to be used to read from a direction-based table, such as M.TAB
+; DE = offset to be used to read from a direction-based table, such as VELOCITY_TABLE or PLAYER_ANIMATION_TABLE
 ;
 ; Remarks:
 ; See also: SETVXY in super.asm within Frenzy's source code
@@ -7307,12 +7350,15 @@ SETDIR:
 SET_VELOCITY:
 2B3D: 4F          ld   c,a
 2B3E: 06 00       ld   b,$00                 ; Extend A into BC (meaning, BC = A)
-2B40: 50          ld   d,b                   
-2B41: 21 42 20    ld   hl,$2042              ; load HL with address of D.TAB
+2B40: 50          ld   d,b                   ; Set d to 0
+2B41: 21 42 20    ld   hl,$2042              ; load HL with address of DIRECTION_OFFSET_TABLE
 2B44: 09          add  hl,bc                 ; now HL = pointer to entry in table   
-2B45: 5E          ld   e,(hl)                ; read offset byte from table. Now DE = offset
-2B46: 21 19 25    ld   hl,$2519              ; load HL with address of M.TAB            
-2B49: 19          add  hl,de                 ; now HL = pointer to entry in M.TAB
+2B45: 5E          ld   e,(hl)                ; read offset byte from DIRECTION_OFFSET_TABLE table. Now DE = offset
+
+; DE is now zero-extended offset read from DIRECTION_OFFSET_TABLE. 
+; Now set VECTOR velocity fields V.X and V.Y from VELOCITY_TABLE velocity lookup table  
+2B46: 21 19 25    ld   hl,$2519              ; load HL with address of VELOCITY_TABLE            
+2B49: 19          add  hl,de                 ; now HL = pointer to entry in VELOCITY_TABLE
 2B4A: 7E          ld   a,(hl)                ; read X velocity from table 
 2B4B: 23          inc  hl
 2B4C: DD 77 06    ld   (ix+$06),a            ; set VECTOR.V.X (X velocity)

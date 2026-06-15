@@ -117,28 +117,28 @@ Video RAM - 32 bytes per scan line. 1 bit per pixel.
 
 void berzerk_state::berzerk_io_map(address_map &map)
 {
-	map.global_mask(0xff);
-	map(0x00, 0x3f).noprw();
-	map(0x40, 0x47).rw(FUNC(berzerk_state::audio_r), FUNC(berzerk_state::audio_w));
-	map(0x48, 0x48).portr("P1").nopw();
-	map(0x49, 0x49).portr("SYSTEM").nopw();
-	map(0x4a, 0x4a).portr("P2").nopw();
-	map(0x4b, 0x4b).nopr().w(FUNC(berzerk_state::magicram_control_w));
-	map(0x4c, 0x4c).rw(FUNC(berzerk_state::nmi_enable_r), FUNC(berzerk_state::nmi_enable_w));
-	map(0x4d, 0x4d).rw(FUNC(berzerk_state::nmi_disable_r), FUNC(berzerk_state::nmi_disable_w));
-	map(0x4e, 0x4e).r(FUNC(berzerk_state::intercept_v256_r)).nopw(); // note reading from here should clear pending frame interrupts, see zfb-1.tiff 74ls74 at 3D pin 13 /CLR
-	map(0x4f, 0x4f).nopr().w(FUNC(berzerk_state::irq_enable_w));
-	map(0x50, 0x57).noprw(); /* second sound board, initialized but not used */
-	map(0x58, 0x5f).noprw();
-	map(0x60, 0x60).mirror(0x18).portr("F3").nopw();
-	map(0x61, 0x61).mirror(0x18).portr("F2").nopw();
-	map(0x62, 0x62).mirror(0x18).portr("F6").nopw();
-	map(0x63, 0x63).mirror(0x18).portr("F5").nopw();
-	map(0x64, 0x64).mirror(0x18).portr("F4").nopw();
-	map(0x65, 0x65).mirror(0x18).portr("SW2").nopw();
-	map(0x66, 0x66).mirror(0x18).rw(FUNC(berzerk_state::led_off_r), FUNC(berzerk_state::led_off_w));
-	map(0x67, 0x67).mirror(0x18).rw(FUNC(berzerk_state::led_on_r), FUNC(berzerk_state::led_on_w));
-	map(0x80, 0xff).noprw();
+	map.global_mask(0xff)                       ;
+	map(0x00, 0x3f).noprw()                     ;
+	map(0x40, 0x47).rw(FUNC(berzerk_state::audio_r), FUNC(berzerk_state::audio_w)) ;
+	map(0x48, 0x48).portr("P1").nopw()          ;
+	map(0x49, 0x49).portr("SYSTEM").nopw()      ;
+	map(0x4a, 0x4a).portr("P2").nopw()          ;
+	map(0x4b, 0x4b).nopr().w(FUNC(berzerk_state::magicram_control_w)) ;
+	map(0x4c, 0x4c).rw(FUNC(berzerk_state::nmi_enable_r), FUNC(berzerk_state::nmi_enable_w)) ;
+	map(0x4d, 0x4d).rw(FUNC(berzerk_state::nmi_disable_r), FUNC(berzerk_state::nmi_disable_w)) ;
+	map(0x4e, 0x4e).r(FUNC(berzerk_state::intercept_v256_r)).nopw() ; // note reading from here should clear pending frame interrupts, see zfb-1.tiff 74ls74 at 3D pin 13 /CLR
+	map(0x4f, 0x4f).nopr().w(FUNC(berzerk_state::irq_enable_w)) ;
+	map(0x50, 0x57).noprw()                     ; /* second sound board, initialized but not used */
+	map(0x58, 0x5f).noprw()                     ;
+	map(0x60, 0x60).mirror(0x18).portr("F3").nopw() ;
+	map(0x61, 0x61).mirror(0x18).portr("F2").nopw() ;
+	map(0x62, 0x62).mirror(0x18).portr("F6").nopw() ;
+	map(0x63, 0x63).mirror(0x18).portr("F5").nopw() ;
+	map(0x64, 0x64).mirror(0x18).portr("F4").nopw() ;
+	map(0x65, 0x65).mirror(0x18).portr("SW2").nopw() ;
+	map(0x66, 0x66).mirror(0x18).rw(FUNC(berzerk_state::led_off_r), FUNC(berzerk_state::led_off_w)) ;
+	map(0x67, 0x67).mirror(0x18).rw(FUNC(berzerk_state::led_on_r), FUNC(berzerk_state::led_on_w)) ;
+	map(0x80, 0xff).noprw()                     ;
 }
 
 
@@ -212,7 +212,7 @@ static INPUT_PORTS_START( common ) // used on all games
 	PORT_BIT( 0xfe, IP_ACTIVE_HIGH, IPT_UNUSED )
 
 	PORT_START("SW2")
-	/* port for the 'bookkeeping reset' and 'bookkeeping' buttons;
+	/* port for the 'bookkeeping reset' and 'bookkeeping' buttons ;
 	 * The 'bookkeeping reset' button is an actual button on the zpu-1000 and
 	 * zpu-1001 pcbs, labeled 'S2' or 'SW2'. It is wired to bit 0.
 	 * * pressing it while high scores are displayed will give a free game
@@ -487,10 +487,10 @@ HI_SCORE_10                 EQU $4338               ; lowest Hi Score
 
 
 P1_SCORE                    EQU $433E               ; Player 1's score. Stored as BCD.  
-                                                    ; $433E = First two digits of score (hundred thousands & ten thousands) 
-                                                    ; $433F = Third and fourth digits of score (thousands & hundreds)
-                                                    ; $4340 = Last two digits of score (tens)   
-                                                    ; e.g. a score of 101120 would be stored as 10 11 20
+                                             ; $433E = First two digits of score (hundred thousands & ten thousands) 
+                                             ; $433F = Third and fourth digits of score (thousands & hundreds)
+                                             ; $4340 = Last two digits of score (tens)   
+                                             ; e.g. a score of 101120 would be stored as 10 11 20
 P2_SCORE                    EQU $4341               ; Player 2's score. Stored in same format as player 1's.
 
 ; Player state.
@@ -513,10 +513,10 @@ XTRAMEN                     EQU $434F               ; Flag. Set to 1 when a bonu
 
 RNG_SEED                    EQU $435C               ; Seed for the random number generator @ $2678
 MAZE_ZONES                  EQU $435E               ; 15-byte maze zone attribute grid (5 cols x 3 rows).
-                                                    ; Initialised from the template at $268C by an LDIR @ $2567.
-                                                    ; Bit 0 ($01) = wall on LEFT edge  | Bit 1 ($02) = wall on RIGHT edge
-                                                    ; Bit 2 ($04) = wall on TOP edge   | Bit 3 ($08) = wall on BOTTOM edge
-                                                    ; Confirmed by $25EB (CREATE_ROOM) and $1C6E (IQ).
+                                             ; Initialised from the template at $268C by an LDIR @ $2567.
+                                             ; Bit 0 ($01) = wall on LEFT edge  | Bit 1 ($02) = wall on RIGHT edge
+                                             ; Bit 2 ($04) = wall on TOP edge   | Bit 3 ($08) = wall on BOTTOM edge
+                                             ; Confirmed by $25EB (CREATE_ROOM) and $1C6E (IQ).
 
 UPDATE                      EQU $436D               ; Flag. Set to $FF when score needs to be updated on screen. See $218D
 IS_DEMO_MODE                EQU $436E               ; Flag. When set to a nonzero value, the game is showing "demo mode".   
@@ -540,14 +540,14 @@ FLIP                        EQU $4379               ; 0 = Playing upright, 8 = p
 
 struct BOLT
 {
-0   BYTE Direction          ; DURL (Direction) bits. bit 0 set: left, bit 1 set: right, bit 2 set: up, bit 3 set: down
-1   BYTE Length             ; current length of bolt.
-2   BYTE X                  ; X coordinate of the head of the bolt
-3   BYTE Y                  ; Y coordinate of the head of the bolt
+0   BYTE Direction                           ; DURL (Direction) bits. bit 0 set: left, bit 1 set: right, bit 2 set: up, bit 3 set: down
+1   BYTE Length                              ; current length of bolt.
+2   BYTE X                                   ; X coordinate of the head of the bolt
+3   BYTE Y                                   ; Y coordinate of the head of the bolt
 4   BYTE LastDirection      
-5   BYTE MaxLength          ; max length of bolt (pixels) - see $1f7C 
-6   BYTE TailX              ; X coordinate of the tail of the bolt
-7   BYTE LastY              ; Y coordinate of the tail of the bolt  
+5   BYTE MaxLength                           ; max length of bolt (pixels) - see $1f7C 
+6   BYTE TailX                               ; X coordinate of the tail of the bolt
+7   BYTE LastY                               ; Y coordinate of the tail of the bolt  
 } sizeof(BOLT) is 8 bytes
 
 PLAYER_BOLTS                EQU $437B
@@ -578,7 +578,7 @@ ROBOT_BOLTS                 EQU $438F
 001B: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 001E: 
     90
-    20 08         ; X/Y coordinates
+    20 08                                    ; X/Y coordinates
 
 0021:  43 6F 6E 67 72 61 74 75 6C 61 74 69 6F 6E 73 20  Congratulations 
 0031:  50 6C 61 79 65 72 20 00                          Player . 
@@ -587,7 +587,7 @@ ROBOT_BOLTS                 EQU $438F
 003A: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 003D: 
     90          
-    10 08         ; X/Y coordinates  
+    10 08                                    ; X/Y coordinates  
 
 0040:  46 65 6C 69 63 69 74 61 74 69 6F 6E 73 20 61 75  Felicitations au
 0050:  20 6A 6F 75 65 75 72 20 00                       joueur .
@@ -1704,38 +1704,38 @@ PRINT_STRING_06B8:
 
 06CC:  43 72 65 64 69 74 73 00                          Credits.
 06D4:
-    A4 08         ; pointer to CMOS RAM where credits is held 
-    02            ; max number of digits  
+    A4 08                                    ; pointer to CMOS RAM where credits is held 
+    02                                       ; max number of digits  
 
 /* 08A4: 
 06D7:  43 68 75 74 65 20 31 00                          Chute 1.
-A6 08             ; pointer to CMOS RAM where chute 1 is held  
-08                ; max number of digits  
+A6 08                                        ; pointer to CMOS RAM where chute 1 is held  
+08                                           ; max number of digits  
 
 06E2:  43 68 75 74 65 20 32 00                          Chute 2.
-AE 08             ; pointer to CMOS RAM where chute 2 is held 
-08                ; max number of digits
+AE 08                                        ; pointer to CMOS RAM where chute 2 is held 
+08                                           ; max number of digits
 
 06ED:  43 68 75 74 65 20 33 00                          Chute 3.
-B6 08             ; pointer to CMOS RAM where chute 3 is held   
-08                ; max number of digits
+B6 08                                        ; pointer to CMOS RAM where chute 3 is held   
+08                                           ; max number of digits
 
 06F8:  50 6C 61 79 73 00                                Plays.
-BE 08             ; pointer to CMOS RAM where plays is held  
-06                ; max number of digits
+BE 08                                        ; pointer to CMOS RAM where plays is held  
+06                                           ; max number of digits
 
 0701:  54 6F 74 61 6C 20 53 63 6F 72 65 00              Total Score.
-C4 08             ; pointer to CMOS RAM where total score is held  
-0C                ; max number of digits
+C4 08                                        ; pointer to CMOS RAM where total score is held  
+0C                                           ; max number of digits
 
 0710:  54 6F 74 61 6C 20 53 65 63 6F 6E 64 73           Total Seconds
 071D:  20 6F 66 20 50 6C 61 79 00                        of Play.
-D0 08             ; pointer to CMOS RAM where total seconds of play is held 
-0C                ; max number of digits
+D0 08                                        ; pointer to CMOS RAM where total seconds of play is held 
+0C                                           ; max number of digits
 
 0729:  48 69 67 68 20 53 63 6F 72 65 73 00              High Scores.
-DC 08             ; pointer to CMOS RAM where high scores is held    
-06                ; max number of digits
+DC 08                                        ; pointer to CMOS RAM where high scores is held    
+06                                           ; max number of digits
 
 ; This terminates the list of entries (see $061E)
 00
@@ -1817,7 +1817,7 @@ WAIT_FOR_1P_FIRE_BUTTON:
 0793: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 0796: 
     90
-    08 20         ; X/Y coordinates    
+    08 20                                    ; X/Y coordinates    
 
 0799:  59 6F 75 20 68 61 76 65 20 6A 6F 69 6E 65 64 20  You have joined 
 07A9:  74 68 65 20 69 6D 6D 6F 72 74 61 6C 73 00        the immortals..
@@ -1825,14 +1825,14 @@ WAIT_FOR_1P_FIRE_BUTTON:
 07B7: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 07BA: 
     90          
-    0C 30         ; X/Y coordinates  
+    0C 30                                    ; X/Y coordinates  
 07BD:  69 6E 20 74 68 65 20 42 45 52 5A 45 52 4B 20 68  in the BERZERK h
 07CD:  61 6C 6C 20 6F 66 20 66 61 6D 65 00              all of fame.
 
 07D9: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 07DC: 
     90          
-    18 50         ; X/Y coordinates 
+    18 50                                    ; X/Y coordinates 
 
 07DF:  45 6E 74 65 72 20 79 6F 75 72 20 69 6E 69 74 69  Enter your initi
 07EF:  61 6C 73 3A 00                                   als:.
@@ -1864,16 +1864,16 @@ WAIT_FOR_1P_FIRE_BUTTON:
 
 ; pattern table for robot standing still
 1000: 
-    10 D1   ; pointer to pixel data for animation frame #1 (see $10D1)                
-    10 DE   ; and subsequent...    
+    10 D1                                    ; pointer to pixel data for animation frame #1 (see $10D1)                
+    10 DE                                    ; and subsequent...    
     10 EB       
     10 F8       
     10 F8       
     10 F8       
     11 05 
-    11 12   ; .. animation frames       
-    00      ; null terminator marker byte - indicates animation sequence has ended 
-    00 10   ; pointer back to $1000, making this animation start over from frame #1 again
+    11 12                                    ; .. animation frames       
+    00                                       ; null terminator marker byte - indicates animation sequence has ended 
+    00 10                                    ; pointer back to $1000, making this animation start over from frame #1 again
 
 ; pattern table for robot moving right/up right/down right
 1013: 
@@ -1922,29 +1922,29 @@ WAIT_FOR_1P_FIRE_BUTTON:
 ; pattern table for player standing still. (1 frame)
 ; See also PLAYER_ANIMATION_TABLE entry 0 at $2053.
 1046: 
-    10 BF          ; sprite pattern at $10BF
+    10 BF                                    ; sprite pattern at $10BF
     00          
-    46 10           ; loop back to $1046
+    46 10                                    ; loop back to $1046
 
 ; pattern table for player moving up/up-right/right/down-right/down
 ; See also PLAYER_ANIMATION_TABLE entries 1-4,8 at $2053.
 104B: 
-    10 AD          ; sprite pattern at $10AD
-    10 9B          ; sprite pattern at $109B
-    10 89          ; sprite pattern at $1089
-    10 9B          ; sprite pattern at $109B (cycle)
+    10 AD                                    ; sprite pattern at $10AD
+    10 9B                                    ; sprite pattern at $109B
+    10 89                                    ; sprite pattern at $1089
+    10 9B                                    ; sprite pattern at $109B (cycle)
     00          
-    4B 10           ; loop back to $104B
+    4B 10                                    ; loop back to $104B
 
 ; pattern table for player moving down-left/left/up-left
 ; See also PLAYER_ANIMATION_TABLE entries 5-7 at $2053.
 1056: 
-    13 B5          ; sprite pattern at $13B5
-    13 A3          ; sprite pattern at $13A3
-    13 91          ; sprite pattern at $1391
-    13 A3          ; sprite pattern at $13A3 (cycle)
+    13 B5                                    ; sprite pattern at $13B5
+    13 A3                                    ; sprite pattern at $13A3
+    13 91                                    ; sprite pattern at $1391
+    13 A3                                    ; sprite pattern at $13A3 (cycle)
     00          
-    56 10           ; loop back to $1056
+    56 10                                    ; loop back to $1056
 
 ; Player shooting up, right pattern table (1 frame)
 1061: 
@@ -2009,106 +2009,106 @@ WAIT_FOR_1P_FIRE_BUTTON:
 ; Byte 2 onwards: pixel data 
 
 1089: 
-    01  ; width in bytes       
-    10  ; height in bytes
+    01                                       ; width in bytes       
+    10                                       ; height in bytes
     18 18 00 3C 5A 99 58 18 18 24 22 41 41 81 81 00          
 
 109B: 
-    01  ; width in bytes
-    10  ; height in bytes
+    01                                       ; width in bytes
+    10                                       ; height in bytes
     00 18 18 00 3C 5C 5C 3E 18 18 14 12 F2 82 02 03          
 
 10AD: 
-    01  ; width in bytes 
-    10  ; height in bytes
+    01                                       ; width in bytes 
+    10                                       ; height in bytes
     18 18 00 3C 5C 5C 5A 18 18 18 18 18 18 18 1C 10
 
 10BF: 
-    01  ; width in bytes 
-    10  ; height in bytes
+    01                                       ; width in bytes 
+    10                                       ; height in bytes
     18 18 00 3C 5A 5A 5A 18 18 18 18 18 18 18 1C 10 
 
 10D1: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 66 FF BD BD BD 3C 24 24 24 66          
 
 10DE: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 4E FF BD BD BD 3C 24 24 24 66          
 
 10EB: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 1E FF BD BD BD 3C 24 24 24 66          
 
 10F8: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 7E FF BD BD BD 3C 24 24 24 66
 
 1105: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 78 FF BD BD BD 3C 24 24 24 66
 
 1112: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 71 FF BD BD BD 3C 24 24 24 66
 
 111F: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 78 FF BD BD BD 3C 18 18 18 1C       
 
 112C: 
-    01  ; width in bytes
-    0B  ; height in bytes
+    01                                       ; width in bytes
+    0B                                       ; height in bytes
     3C 78 FF BD BD BD 3C 24 24 24 36 
 
 1139: 
-    01  ; width in bytes  
-    0C  ; height in bytes        
+    01                                       ; width in bytes  
+    0C                                       ; height in bytes        
     3C 66 FF BD BD BD 3C 24 24 26 20 60          
 
 1147: 
-    01  ; width in bytes  
-    0C  ; height in bytes   
+    01                                       ; width in bytes  
+    0C                                       ; height in bytes   
     3C 66 FF BD BD BD 3C 24 24 64 04 06
 
 1155: 
-    01  ; width in bytes  
-    0B  ; height in bytes 
+    01                                       ; width in bytes  
+    0B                                       ; height in bytes 
     3C 1E FF BD BD BD 3C 24 24 24 6C    
 
 1162: 
-    01  ; width in bytes  
-    0B  ; height in bytes
+    01                                       ; width in bytes  
+    0B                                       ; height in bytes
     3C 1E FF BD BD BD 3C 18 18 18 38       
 
 116F: 
-    01  ; width in bytes  
-    0B  ; height in bytes
+    01                                       ; width in bytes  
+    0B                                       ; height in bytes
     3C 7E FF BD BD BD 3C 24 24 24 66
 
 117C: 
-    01  ; width in bytes  
-    0C  ; height in bytes 
+    01                                       ; width in bytes  
+    0C                                       ; height in bytes 
     3C 7E FF BD BD BD 3C 24 24 26 20 60
 
 118A: 
-    01  ; width in bytes  
-    0C  ; height in bytes 
+    01                                       ; width in bytes  
+    0C                                       ; height in bytes 
     3C 7E FF BD BD BD 3C 24 24 64 04 06 
     
 ; Robot explosion sprite patterns 
 
 ; Robot explosion frame #1
 1198: 
-    02  ; width in bytes
-    11  ; height in bytes 
+    02                                       ; width in bytes
+    11                                       ; height in bytes 
     00 00 00 00 00 00 00 00 00 00 00 00 03 C0 07 E0 0F
 
 
@@ -2129,8 +2129,8 @@ WAIT_FOR_1P_FIRE_BUTTON:
 
 ; Robot explosion Frame #2
 11BC: 
-    02  ; width in bytes          
-    11  ; height in bytes 
+    02                                       ; width in bytes          
+    11                                       ; height in bytes 
     00 00 00 00 00 00 00 00 03 C0 06 60 12 48 08 10 10
 
 11CF: 08          ex   af,af'
@@ -2321,17 +2321,17 @@ WAIT_FOR_1P_FIRE_BUTTON:
 ; See also PLAYER_ANIMATION_TABLE entry 9 at $2053.
 ;
 12B3: 
-    D0 12       ; sprite pattern at $12D0 (normal standing)
-    BE 12       ; sprite pattern at $12BE (smaller/shrinking)
-    E3 12       ; sprite pattern at $12E3 (disintegrating)
-    F6 12       ; sprite pattern at $12F6 (nearly gone)
+    D0 12                                    ; sprite pattern at $12D0 (normal standing)
+    BE 12                                    ; sprite pattern at $12BE (smaller/shrinking)
+    E3 12                                    ; sprite pattern at $12E3 (disintegrating)
+    F6 12                                    ; sprite pattern at $12F6 (nearly gone)
     00
-    B3 12       ; loop back to $12B3
+    B3 12                                    ; loop back to $12B3
 
 
 12BE: 
-    01  ; width in bytes
-    10  ; height in bytes
+    01                                       ; width in bytes
+    10                                       ; height in bytes
     00 18 18 00 3C 5A 5A 5A 18 18 18 18 18 18 18 3C       
 
 
@@ -2340,59 +2340,59 @@ WAIT_FOR_1P_FIRE_BUTTON:
 ;
 
 12D0: 
-    01  ; width in bytes 
-    11  ; height in bytes  
+    01                                       ; width in bytes 
+    11                                       ; height in bytes  
     18 24 24 42 81 81 81 81 81 42 24 24 24 24 24 42 3C          
 
 12E3: 
-    01  ; width in bytes  
-    11  ; height in bytes 
+    01                                       ; width in bytes  
+    11                                       ; height in bytes 
     3C 24 24 7E C3 A5 A5 A5 E7 66 24 24 24 24 66 42 7E          
 
 12F6: 
-    01  ; width in bytes  
-    11  ; height in bytes 
+    01                                       ; width in bytes  
+    11                                       ; height in bytes 
     3C 3C 3C 7E FF FF FF FF FF 7E 3C 3C 3C 3C 7E 7E 7E          
 
 1309: 
-    01  ; width in bytes  
-    0F  ; height in bytes   
+    01                                       ; width in bytes  
+    0F                                       ; height in bytes   
     18 19 04 1C 18 18 18 18 18 18 18 18 18 18 1C          
 
 131A: 
-    01  ; width in bytes 
-    0F  ; height in bytes 
+    01                                       ; width in bytes 
+    0F                                       ; height in bytes 
     18 18 00 1F 18 18 18 18 18 18 18 18 18 18 1C          
 
 132B: 
-    01  ; width in bytes 
-    0F  ; height in bytes  
+    01                                       ; width in bytes 
+    0F                                       ; height in bytes  
     18 18 00 18 18 1C 1A 18 18 18 18 18 18 18 1C       
 
 
 133C: 
-    01  ; width in bytes 
-    0F  ; height in bytes  
+    01                                       ; width in bytes 
+    0F                                       ; height in bytes  
     18 18 00 3C 3C 3A 3A 3A 18 18 18 18 18 18 1C          
 
 134D: 
-    01  ; width in bytes 
-    0F  ; height in bytes  
+    01                                       ; width in bytes 
+    0F                                       ; height in bytes  
     18 18 00 3C 3C 5C 9C 1C 18 18 18 18 18 18 38 
 
 135E:
-    01  ; width in bytes 
-    0F  ; height in bytes 
+    01                                       ; width in bytes 
+    0F                                       ; height in bytes 
     18 18 00 F8 18 18 18 18 18 18 18 18 18 18 38 
 
 136F:
-    01  ; width in bytes 
-    0F  ; height in bytes           
+    01                                       ; width in bytes 
+    0F                                       ; height in bytes           
     98 58 20 18 18 18 18 18 18 18 18 18 18 18 38 
 
 1380:
-    01  ; width in bytes 
-    0F  ; height in bytes 
+    01                                       ; width in bytes 
+    0F                                       ; height in bytes 
     18 18 00 1D 1B 19 18 18 18 18 18 18 18 18 38 
 
 
@@ -2453,7 +2453,7 @@ WAIT_FOR_1P_FIRE_BUTTON:
 13DE: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 13E1: 
     90          
-    20 BE         ; X/Y coordinates      
+    20 BE                                    ; X/Y coordinates      
 13E4:  53 74 61 72 74 6B 6E 6F 65 70 66 65 20 64 72 75  Startknoepfe dru
 13F4:  65 63 6B 65 6E 00                                ecken.
 13FA: C9          ret
@@ -2461,21 +2461,21 @@ WAIT_FOR_1P_FIRE_BUTTON:
 13FB: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 13FE: 
     90          
-    44 BE         ; X/Y coordinates  
+    44 BE                                    ; X/Y coordinates  
 1401:  50 75 6C 73 61 72 20 53 74 61 72 74 00           Pulsar Start.
 140E: C9          ret
 
 140F: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1412: 
     90          
-    58 BE         ; X/Y coordinates    
+    58 BE                                    ; X/Y coordinates    
 1415:  49 6E 73 65 72 74 20 43 6F 69 6E 00              Insert Coin.
 1421: C9          ret
 
 1422: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1425: 
     90          
-    30 BE         ; X/Y coordinates  
+    30 BE                                    ; X/Y coordinates  
 1428:  49 6E 74 72 6F 64 75 69 72 65 20 6C 61 20 6D 6F  Introduire la mo
 1438:  6E 6E 61 69 65 00                                nnaie.
 143E: C9          ret
@@ -2483,14 +2483,14 @@ WAIT_FOR_1P_FIRE_BUTTON:
 143F: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1442: 
     90          
-    48 BE         ; X/Y coordinates 
+    48 BE                                    ; X/Y coordinates 
 1445:  4D 75 6E 7A 65 20 65 69 6E 77 65 72 66 65 6E 00  Munze einwerfen.
 1455: C9          ret
 
 1456: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1459: 
     90          
-    48 BE         ; X/Y coordinates 
+    48 BE                                    ; X/Y coordinates 
 
 145C:  50 6F 6E 67 61 20 6C 61 20 6D 6F 6E 65 64 61 00  Ponga la moneda.
 146C: C9          ret
@@ -2633,7 +2633,7 @@ HANDLE_PLAYER_BOLTS:
 ;
 ;
 ; Expects:
-; IY = pointer to BOLT structure
+; IY = pointer to BOLT structure (DURL bits in Direction field at offset 0)
 ;
 ; Remarks:
 ; See also: 
@@ -2720,6 +2720,7 @@ MOVE_AND_DRAW_BOLT:
 ;
 ; Expects:
 ; IY = pointer to BOLT structure
+; B = DURL Direction bits (read from BOLT.Direction at offset 0)
 ;
 
 CHECK_IF_BOLT_OFFSCREEN:
@@ -3562,7 +3563,7 @@ DECREMENT_CREDITS:
 19B2: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 19B5: 
     90 
-    0C BE         ; X/Y coordinates
+    0C BE                                    ; X/Y coordinates
 
 19B8:  1F 31 39 38 30 20 53 54 45 52 4E 20 45 6C 65 63  .1980 STERN Elec
 19C8:  74 72 6F 6E 69 63 73 2C 20 49 6E 63 2E 00        tronics, Inc.
@@ -3700,12 +3701,12 @@ CLEAR_SCREEN:
 
 ; cocktail cabinet
 1A8D: 3E 08       ld   a,$08
-1A8F: 32 79 43    ld   ($4379),a			 ; set FLIP flag
+1A8F: 32 79 43    ld   ($4379),a             ; set FLIP flag
 1A92: C9          ret
 
 ; upright cabinet
 1A93: AF          xor  a
-1A94: 32 79 43    ld   ($4379),a			 ; set FLIP flag	
+1A94: 32 79 43    ld   ($4379),a             ; set FLIP flag	
 1A97: C9          ret
 
 
@@ -3726,26 +3727,26 @@ CLEAR_SCREEN:
 1AA3: CD 13 36    call $3613
 1AA6: CD ED 1A    call $1AED                 ; call LTABLE
 1AA9: 
-    94 1B         ; $1B94: Push 1 or 2 player start button
-    DE 1B         ; $1BDE: Startknoepfe druecken.  
-    BB 1B         ; $1BBB: Pousser bouton start 1 ou 2.
-    FB 1B         ; $1BFB: Pulsar Start. 
+    94 1B                                    ; $1B94: Push 1 or 2 player start button
+    DE 1B                                    ; $1BDE: Startknoepfe druecken.  
+    BB 1B                                    ; $1BBB: Pousser bouton start 1 ou 2.
+    FB 1B                                    ; $1BFB: Pulsar Start. 
 1AB1: C9          ret
 1AB2: CD 0A 36    call $360A
 1AB5: CD ED 1A    call $1AED                 ; call LTABLE
 1AB8: 
-    54 1B         ; $1B54: Push 1 Player Start Button. 
-    DE 1B         ; $1BDE: Startknoepfe druecken.
-    76 1B         ; $1B76: Pousser bouton start 1. 
-    FB 1B         ; $1BFB: Pulsar Start. 
+    54 1B                                    ; $1B54: Push 1 Player Start Button. 
+    DE 1B                                    ; $1BDE: Startknoepfe druecken.
+    76 1B                                    ; $1B76: Pousser bouton start 1. 
+    FB 1B                                    ; $1BFB: Pulsar Start. 
 1AC0: C9          ret
 1AC1: CD 01 36    call $3601                 
 1AC4: CD ED 1A    call $1AED                 ; call LTABLE 
 1AC7: 
-    0F 1C         ; $1C0F: Insert Coin.      
-    3F 1C         ; $1C3F: Munze einwerfen. 
-    22 1C         ; $1C22: Introduire la monnaie.          
-    56 1C         ; $1C56: Ponga la moneda.  
+    0F 1C                                    ; $1C0F: Insert Coin.      
+    3F 1C                                    ; $1C3F: Munze einwerfen. 
+    22 1C                                    ; $1C22: Introduire la monnaie.          
+    56 1C                                    ; $1C56: Ponga la moneda.  
 
 ; Say "coins detected in pocket"
 1ACF: 21 D6 1A    ld   hl,$1AD6              ; load HL with address of COINS_DETECTED_IN_POCKET speech   
@@ -3756,10 +3757,10 @@ CLEAR_SCREEN:
 COINS_DETECTED_IN_POCKET:
 1AD6: 
     65            
-    10            ; COINS
-    09            ; DETECTED
-    0B            ; IN
-    11            ; POCKET
+    10                                       ; COINS
+    09                                       ; DETECTED
+    0B                                       ; IN
+    11                                       ; POCKET
     45 
     FF    
 
@@ -3814,7 +3815,7 @@ LTABLE:
 1B04: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1B07: 
     90          
-    58 00         ; X/Y coordinates          
+    58 00                                    ; X/Y coordinates          
 1B0A:  48 69 67 68 20 53 63 6F 72 65 73 00              High Scores.
 
 1B16: C9          ret
@@ -3822,7 +3823,7 @@ LTABLE:
 1B17: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1B1A: 
     90          
-    48 00         ; X/Y coordinates             
+    48 00                                    ; X/Y coordinates             
 1B1D:  4D 65 69 6C 6C 65 75 72 20 53 63 6F 72 65 00     Meilleur Score..
 
 1B2C: C9          ret
@@ -3830,7 +3831,7 @@ LTABLE:
 1B2D: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1B30: 
     90          
-    40 00         ; X/Y coordinates           
+    40 00                                    ; X/Y coordinates           
 1B33:  48 6F 65 63 68 73 74 65 72 20 47 65 62 6E 69 73  Hoechster Gebnis
 1B43:  00
 
@@ -3839,7 +3840,7 @@ LTABLE:
 1B45: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1B48: 
     90          
-    5C 00         ; X/Y coordinates  
+    5C 00                                    ; X/Y coordinates  
 1B4B:  52 65 63 6F 72 64 73 00                          Records.
 
 1B53: C9          ret
@@ -3847,7 +3848,7 @@ LTABLE:
 1B54: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1B57: 
     90          
-    14 BE         ; X/Y coordinates  
+    14 BE                                    ; X/Y coordinates  
 1B5A:  50 75 73 68 20 31 20 50 6C 61 79 65 72 20 53 74  Push 1 Player St
 1B6A:  61 72 74 20 42 75 74 74 6F 6E 00                 art Button.
 1B75: C9          ret
@@ -3855,7 +3856,7 @@ LTABLE:
 1B76: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1B79: 
     90
-    24 BE         ; X/Y coordinates 
+    24 BE                                    ; X/Y coordinates 
 1B7C:  50 6F 75 73 73 65 72 20 62 6F 75 74 6F 6E 20 73  Pousser bouton s
 1B8C:  74 61 72 74 20 31 00                             tart 1.
 1B93: C9          ret
@@ -3863,7 +3864,7 @@ LTABLE:
 1B94: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1B97: 
     90          
-    04 BE         ; X/Y coordinates 
+    04 BE                                    ; X/Y coordinates 
 1B9A:  50 75 73 68 20 31 20 6F 72 20 32 20 50 6C 61 79  Push 1 or 2 Play
 1BAA:  65 72 20 53 74 61 72 74 20 42 75 74 74 6F 6E 00  er Start Button.
 1BBA: C9          ret
@@ -3871,7 +3872,7 @@ LTABLE:
 1BBB: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1BBE: 
     90          
-    10 BE         ; X/Y coordinates 
+    10 BE                                    ; X/Y coordinates 
 1BC1:  50 6F 75 73 73 65 72 20 62 6F 75 74 6F 6E 20 73  Pousser bouton s
 1BD1:  74 61 72 74 20 31 20 6F 75 20 32 00              tart 1 ou 2.
 1BDD: C9          ret
@@ -3879,7 +3880,7 @@ LTABLE:
 1BDE: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1BE1: 
     90          
-    20 BE         ; X/Y coordinates
+    20 BE                                    ; X/Y coordinates
 1BE4:  53 74 61 72 74 6B 6E 6F 65 70 66 65 20 64 72 75  Startknoepfe dru
 1BF4:  65 63 6B 65 6E 00 C9 CD 7B 29 90 44 BE 50 75 6C  ecken.
 1BFA: C9          ret
@@ -3887,21 +3888,21 @@ LTABLE:
 1BFB: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1BFE: 
     90          
-    44 BE         ; X/Y coordinates 
+    44 BE                                    ; X/Y coordinates 
 1C01:  50 75 6C 73 61 72 20 53 74 61 72 74 00           Pulsar Start.
 1C0E: C9          ret
 
 1C0F: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1C12: 
     90          
-    58 BE         ; X/Y coordinates 
+    58 BE                                    ; X/Y coordinates 
 1C15:  49 6E 73 65 72 74 20 43 6F 69 6E 00              Insert Coin.
 1C21: C9          ret
 
 1C22: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1C25: 
     90          
-    30 BE         ; X/Y coordinates 
+    30 BE                                    ; X/Y coordinates 
 1C28:  49 6E 74 72 6F 64 75 69 72 65 20 6C 61 20 6D 6F  Introduire la mo
 1C38:  6E 6E 61 69 65 00                                nnaie.          
 1C3E: C9          ret
@@ -3909,18 +3910,18 @@ LTABLE:
 1C3F: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1C42: 
     90
-    48 BE         ; X/Y coordinates 
+    48 BE                                    ; X/Y coordinates 
 1C45:  4D 75 6E 7A 65 20 65 69 6E 77 65 72 66 65 6E 00  Munze einwerfen.
 1C55: C9          ret
 
 1C56: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 1C59: 
     90
-    48 BE         ; X/Y coordinates 
+    48 BE                                    ; X/Y coordinates 
 1C5C:  50 6F 6E 67 61 20 6C 61 20 6D 6F 6E 65 64 61 00  Ponga la moneda.
 1C6C: C9          ret
 
-1C6D: A3          and  e                    ; stray byte (orphaned from data preceding)
+1C6D: A3          and  e                     ; stray byte (orphaned from data preceding)
 
 ;
 ; Obstacle check for robot pathfinding. Called from SETPAT when a robot
@@ -3974,34 +3975,34 @@ IQ:
 1C99: C9          ret                        ;  the desired direction
 
 ; Probe 3: attribute at (robot.X+16-4, robot.Y-4) = top-right probe
-1C9A: 7C          ld   a,h                  ; A = robot.X-4 (HL still holds robot pos from $1C88)
-1C9B: E5          push hl                   ; save (robot.X-4, robot.Y-4) coordinates
-1C9C: C6 10       add  a,$10                ; add 16 to X
-1C9E: 67          ld   h,a                  ; H = robot.X-4+16 = robot.X+12
+1C9A: 7C          ld   a,h                   ; A = robot.X-4 (HL still holds robot pos from $1C88)
+1C9B: E5          push hl                    ; save (robot.X-4, robot.Y-4) coordinates
+1C9C: C6 10       add  a,$10                 ; add 16 to X
+1C9E: 67          ld   h,a                   ; H = robot.X-4+16 = robot.X+12
 1C9F: CD E7 1C    call $1CE7                 ; call WALLINDEX → A=attr (stored as C' top-right probe)
 1CA2: D9          exx
-1CA3: 4F          ld   c,a                  ; C' = top-right probe attribute
+1CA3: 4F          ld   c,a                   ; C' = top-right probe attribute
 1CA4: D9          exx
 
 ; Probe 4: attribute at (robot.X+12, robot.Y-4+19) = bottom-right probe
-1CA5: 7D          ld   a,l                  ; A = robot.Y-4
-1CA6: C6 13       add  a,$13                ; add 19 to Y
-1CA8: 6F          ld   l,a                  ; L = robot.Y-4+19 = robot.Y+15
+1CA5: 7D          ld   a,l                   ; A = robot.Y-4
+1CA6: C6 13       add  a,$13                 ; add 19 to Y
+1CA8: 6F          ld   l,a                   ; L = robot.Y-4+19 = robot.Y+15
 1CA9: CD E7 1C    call $1CE7                 ; call WALLINDEX → A=attr (stored as D' bottom-right probe)
 1CAC: D9          exx
-1CAD: 57          ld   d,a                  ; D' = bottom-right probe attribute
+1CAD: 57          ld   d,a                   ; D' = bottom-right probe attribute
 1CAE: D9          exx
 
 ; Probe 5: attribute at (original.X-4, robot.Y+15) = bottom-left probe
-1CAF: 7D          ld   a,l                  ; A = robot.Y+15
-1CB0: E1          pop  hl                   ; H = (robot.X-4), L = (robot.Y-4) from push @ $1C9B
-1CB1: 6F          ld   l,a                  ; L = robot.Y+15, H = robot.X-4
+1CAF: 7D          ld   a,l                   ; A = robot.Y+15
+1CB0: E1          pop  hl                    ; H = (robot.X-4), L = (robot.Y-4) from push @ $1C9B
+1CB1: 6F          ld   l,a                   ; L = robot.Y+15, H = robot.X-4
 1CB2: CD E7 1C    call $1CE7                 ; call WALLINDEX → A=attr (stored as E' bottom-left probe)
 1CB5: D9          exx
-1CB6: 5F          ld   e,a                  ; E' = bottom-left probe attribute
-1CB7: F1          pop  af                   ; A = original desired direction (DURL bits)
-1CB8: 67          ld   h,a                  ; H = direction bits
-1CB9: 2E 00       ld   l,$00               ; L = 0 (accumulator for blocked direction mask)
+1CB6: 5F          ld   e,a                   ; E' = bottom-left probe attribute
+1CB7: F1          pop  af                    ; A = original desired direction (DURL bits)
+1CB8: 67          ld   h,a                   ; H = direction bits
+1CB9: 2E 00       ld   l,$00                 ; L = 0 (accumulator for blocked direction mask)
 ; The 4 probe points form a 2x2 grid centred on the robot:
 ;   B' = top-left     (robot.X-4, robot.Y-4)
 ;   C' = top-right    (robot.X+12, robot.Y-4)
@@ -4012,39 +4013,39 @@ IQ:
 ; and test the corresponding bit. If set, that path is blocked.
 
 ; Test DOWN (bit 3): check top-edge probes (B' | C') & $08
-1CBB: CB 5C       bit  3,h                  ; DOWN direction desired?
-1CBD: 28 06       jr   z,$1CC5              ; if not, skip
-1CBF: 78          ld   a,b                  ; A = top-left probe attribute
-1CC0: B1          or   c                    ; OR with top-right probe
-1CC1: E6 08       and  $08                  ; test bit 3 (DOWN block flag)
-1CC3: B5          or   l                    ; accumulate in L
+1CBB: CB 5C       bit  3,h                   ; DOWN direction desired?
+1CBD: 28 06       jr   z,$1CC5               ; if not, skip
+1CBF: 78          ld   a,b                   ; A = top-left probe attribute
+1CC0: B1          or   c                     ; OR with top-right probe
+1CC1: E6 08       and  $08                   ; test bit 3 (DOWN block flag)
+1CC3: B5          or   l                     ; accumulate in L
 1CC4: 6F          ld   l,a
 
 ; Test UP (bit 2): check bottom-edge probes (D' | E') & $04
-1CC5: CB 54       bit  2,h                  ; UP direction desired?
-1CC7: 28 06       jr   z,$1CCF              ; if not, skip
-1CC9: 7A          ld   a,d                  ; A = bottom-right probe attribute
-1CCA: B3          or   e                    ; OR with bottom-left probe
-1CCB: E6 04       and  $04                  ; test bit 2 (UP block flag)
-1CCD: B5          or   l                    ; accumulate in L
+1CC5: CB 54       bit  2,h                   ; UP direction desired?
+1CC7: 28 06       jr   z,$1CCF               ; if not, skip
+1CC9: 7A          ld   a,d                   ; A = bottom-right probe attribute
+1CCA: B3          or   e                     ; OR with bottom-left probe
+1CCB: E6 04       and  $04                   ; test bit 2 (UP block flag)
+1CCD: B5          or   l                     ; accumulate in L
 1CCE: 6F          ld   l,a
 
 ; Test RIGHT (bit 1): check left-edge probes (B' | E') & $02
-1CCF: CB 4C       bit  1,h                  ; RIGHT direction desired?
-1CD1: 28 06       jr   z,$1CD9              ; if not, skip
-1CD3: 78          ld   a,b                  ; A = top-left probe attribute
-1CD4: B3          or   e                    ; OR with bottom-left probe
-1CD5: E6 02       and  $02                  ; test bit 1 (RIGHT block flag)
-1CD7: B5          or   l                    ; accumulate in L
+1CCF: CB 4C       bit  1,h                   ; RIGHT direction desired?
+1CD1: 28 06       jr   z,$1CD9               ; if not, skip
+1CD3: 78          ld   a,b                   ; A = top-left probe attribute
+1CD4: B3          or   e                     ; OR with bottom-left probe
+1CD5: E6 02       and  $02                   ; test bit 1 (RIGHT block flag)
+1CD7: B5          or   l                     ; accumulate in L
 1CD8: 6F          ld   l,a
 
 ; Test LEFT (bit 0): check right-edge probes (C' | D') & $01
-1CD9: CB 44       bit  0,h                  ; LEFT direction desired?
-1CDB: 28 06       jr   z,$1CE3              ; if not, skip
-1CDD: 79          ld   a,c                  ; A = top-right probe attribute
-1CDE: B2          or   d                    ; OR with bottom-right probe
-1CDF: E6 01       and  $01                  ; test bit 0 (LEFT block flag)
-1CE1: B5          or   l                    ; accumulate in L
+1CD9: CB 44       bit  0,h                   ; LEFT direction desired?
+1CDB: 28 06       jr   z,$1CE3               ; if not, skip
+1CDD: 79          ld   a,c                   ; A = top-right probe attribute
+1CDE: B2          or   d                     ; OR with bottom-right probe
+1CDF: E6 01       and  $01                   ; test bit 0 (LEFT block flag)
+1CE1: B5          or   l                     ; accumulate in L
 1CE2: 6F          ld   l,a
 
 ; L now has bits set for blocked directions. Invert to get clear paths.
@@ -4076,7 +4077,8 @@ IQ:
 ;    Within each row, col 0 = X<58, …, col 4 = X≥202.
 
 WALLINDEX:
-1CE7: 7D          ld   a,l                   ; A = Y (major axis for row select)
+; First find out what row we are in.
+1CE7: 7D          ld   a,l                   ; A = Y (used to select row from MAZE_ZONES)
 1CE8: 1E 00       ld   e,$00                 ; default E = 0 (row 0)
 1CEA: FE 46       cp   $46                   ; Y < 70? (row 0)
 1CEC: 38 08       jr   c,$1CF6               ; yes, skip with E=0
@@ -4086,14 +4088,14 @@ WALLINDEX:
 1CF4: 1E 0A       ld   e,$0A                 ; no: E = 10 (row 2 offset)
 
 ; E now = zero-based row*5. Next: determine which of the 5 X columns we are in.
-1CF6: 7C          ld   a,h                   ; A = X (minor axis for col select)
+1CF6: 7C          ld   a,h                   ; A = X (used to select column from MAZE_ZONES)
 1CF7: 06 05       ld   b,$05                 ; B = 5 columns per row
-1CF9: 0E 3A       ld   c,$3A                 ; C = 58 (first column maximum X boundary)
+1CF9: 0E 3A       ld   c,$3A                 ; C = 58 (first column X boundary)
 1CFB: 16 30       ld   d,$30                 ; D = 48 (step between boundaries)
 
 ; Loop: increment E for each X boundary passed
 1CFD: B9          cp   c                     ; X < current boundary?
-1CFE: 38 08       jr   c,$1D08               ; yes → we found our column
+1CFE: 38 08       jr   c,$1D08               ; yes, E = index, goto $1D08
 1D00: 1C          inc  e                     ; no → advance to next column (E++)
 1D01: 08          ex   af,af'                ; save X
 1D02: 79          ld   a,c                   ; A = current boundary
@@ -4102,7 +4104,7 @@ WALLINDEX:
 1D05: 08          ex   af,af'                ; restore X
 1D06: 10 F5       djnz $1CFD                 ; loop for up to 5 columns
 
-; E = final grid index = (row * 5) + col (0-14)
+; E = final grid index.
 1D08: EB          ex   de,hl                 ; HL = index
 1D09: 01 5E 43    ld   bc,$435E              ; BC = MAZE_ZONES base address
 1D0C: 26 00       ld   h,$00                 ; HL = unsigned 8-bit index
@@ -4474,7 +4476,7 @@ STOP_JOB:
 1E80: 31 70 08    ld   sp,$0870              ; reset SP above job data
 1E83: FD 75 02    ld   (iy+$02),l            ; save checkpoint SP at +2,+3
 1E86: FD 74 03    ld   (iy+$03),h
-                                              ; fall through to runner
+                                             ; fall through to runner
 1E89: 18 04       jr   $1E8F
 
 ;
@@ -4552,15 +4554,16 @@ MAN:
 
 ;
 ; Expects:
-; C = Last direction player moved
+; A = DURL bits read from player controls
+; C = Last DURL direction player moved in
 ;
 ; Remarks:
 ; See also S.STICK in control.asm within Frenzy's source code.
 
 MOVE_PLAYER:
 1EE1: 3A 79 43    ld   a,($4379)             ; read FLIP
-1EE4: B7          or   a					 ; is upright cabinet?
-1EE5: 28 04       jr   z,$1EEB				 ; yes, goto $1EEB
+1EE4: B7          or   a                     ; is upright cabinet?
+1EE5: 28 04       jr   z,$1EEB               ; yes, goto $1EEB
 1EE7: DB 4A       in   a,($4A)               ; read player 2 controls
 1EE9: 18 02       jr   $1EED
 
@@ -4584,7 +4587,7 @@ MOVE_PLAYER:
 ; Fire button has been pressed. Can the player shoot?
 ;
 ; Expects:
-; D = controller bits read from P1 or P2 control
+; D = DURL bits read from P1 or P2 control
 ; IY = ???
 ; 
 ; See also: TRY.F in Frenzy's MAN.ASM source.
@@ -4606,7 +4609,7 @@ TRY_FIRE:
 ; Attempt to fire a bolt.
 ;
 ; Expects: 
-; D= direction bits read from P1 or P2 controls
+; D = DURL bits read from P1 or P2 controls
 ; IX = pointer to player's VECTOR structure
 ; IY = pointer to BOLT structure to use for player's bolt
 ;
@@ -4702,6 +4705,10 @@ CHANGE_PLAYER_DIRECTION:
 ; CDIR — Set the player's animation pattern and velocity for a new
 ; direction.
 ; 
+; Expects:
+; A = DURL direction bits
+; IX = pointer to VECTOR structure
+;
 ; Updates the following VECTOR fields:
 ;    VECTOR.V.X, 
 ;    VECTOR.V.Y, 
@@ -4748,8 +4755,8 @@ PLAYER_DEAD:
 1FC1: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 1FC4: 18 F5       jr   $1FBB
 
-1FC6: 2A 76 08    ld   hl,($0876)           ; load HL with contents of MAN_PTR. Now HL = pointer to player's VECTOR
-1FC9: 36 09       ld   (hl),$09             ; set ERASE | BLANK ($09 = $01|$08)
+1FC6: 2A 76 08    ld   hl,($0876)            ; load HL with contents of MAN_PTR. Now HL = pointer to player's VECTOR
+1FC9: 36 09       ld   (hl),$09              ; set ERASE | BLANK ($09 = $01|$08)
 1FCB: FD CB 00 86 res  0,(iy+$00)
 1FCF: CD 78 1E    call $1E78                 ; call STOP_JOB → yield to runner
 1FD2: 18 FB       jr   $1FCF
@@ -4763,7 +4770,7 @@ PLAYER_DEAD:
 ;
 
 MAN_INIT:
-1FD4: FD E1       pop  iy                   ; pop return address off stack into IY
+1FD4: FD E1       pop  iy                    ; pop return address off stack into IY
 
 ; Allocate and zero 14 bytes on the stack for player's VECTOR 
 1FD6: 21 00 00    ld   hl,$0000
@@ -4852,23 +4859,23 @@ MAN_INIT:
 
 DIRECTION_OFFSET_TABLE:
 2042: 
-    00            ; no move   
-    0C            ; left
-    04            ; right
+    00                                       ; no move   
+    0C                                       ; left
+    04                                       ; right
     00        
-    10            ; up
-    0E            ; up,left 
-    02            ; up,right
-    10            ; up default
-    08            ; down
-    0A            ; down,left
-    06            ; down,right
-    08            ; down default
+    10                                       ; up
+    0E                                       ; up,left 
+    02                                       ; up,right
+    10                                       ; up default
+    08                                       ; down
+    0A                                       ; down,left
+    06                                       ; down,right
+    08                                       ; down default
     00            
-    0C            ; left default
-    04            ; right default
+    0C                                       ; left default
+    04                                       ; right default
     00        
-    12            ; explode
+    12                                       ; explode
 
 
 ;
@@ -4901,16 +4908,16 @@ DIRECTION_OFFSET_TABLE:
 
 PLAYER_ANIMATION_TABLE:
 2053: 
-    46 10       ; $1046 = stand still
-    4B 10       ; $104B = move up-right
-    4B 10       ; $104B = move right
-    4B 10       ; $104B = move down-right
-    4B 10       ; $104B = move down
-    56 10       ; $1056 = move down-left
-    56 10       ; $1056 = move left
-    56 10       ; $1056 = move up-left
-    4B 10       ; $104B = move up
-    B3 12       ; $12B3 = death / electrocution
+    46 10                                    ; $1046 = stand still
+    4B 10                                    ; $104B = move up-right
+    4B 10                                    ; $104B = move right
+    4B 10                                    ; $104B = move down-right
+    4B 10                                    ; $104B = move down
+    56 10                                    ; $1056 = move down-left
+    56 10                                    ; $1056 = move left
+    56 10                                    ; $1056 = move up-left
+    4B 10                                    ; $104B = move up
+    B3 12                                    ; $12B3 = death / electrocution
 
 
 ;
@@ -4935,34 +4942,34 @@ PLAYER_ANIMATION_TABLE:
 SR.TAB:
 ; No direction
 2067: 
-    46 10       ; pointer to pattern table        
-    00          ; Bolt starting position X Delta (0 as can't shoot if joystick not pointing in a direction)
+    46 10                                    ; pointer to pattern table        
+    00                                       ; Bolt starting position X Delta (0 as can't shoot if joystick not pointing in a direction)
     00          
-    00          ; DURL bits (0 = No direction)
+    00                                       ; DURL bits (0 = No direction)
     00          
 
 ; Player shooting UP + RIGHT
 206D: 
-    61 10       ; pointer to pattern table 
-    07          ; Bolt X delta 
-    01          ; Bolt Y delta 
-    06          ; DURL bits (RIGHT + UP)
+    61 10                                    ; pointer to pattern table 
+    07                                       ; Bolt X delta 
+    01                                       ; Bolt Y delta 
+    06                                       ; DURL bits (RIGHT + UP)
     00 
 
 ; Player shooting RIGHT
 2073: 
-    66 10       ; pointer to pattern table 
-    07          ; Bolt X delta 
-    03          ; Bolt Y delta 
-    02          ; DURL bits (RIGHT)
+    66 10                                    ; pointer to pattern table 
+    07                                       ; Bolt X delta 
+    03                                       ; Bolt Y delta 
+    02                                       ; DURL bits (RIGHT)
     00
 
 ; Player shooting DOWN + RIGHT   
 2079: 
-    6B 10       ; pointer to pattern table
-    06          ; Bolt X delta 
-    06          ; Bolt Y delta  
-    0A          ; DURL bits (RIGHT + DOWN)
+    6B 10                                    ; pointer to pattern table
+    06                                       ; Bolt X delta 
+    06                                       ; Bolt Y delta  
+    0A                                       ; DURL bits (RIGHT + DOWN)
     00          
 
 ; Player shooting DOWN
@@ -5099,7 +5106,7 @@ SR.TAB:
 2150: FD 21 A9 1E ld   iy,$1EA9
 2154: C3 8E 2A    jp   $2A8E
 
-2157: DD 2A 76 08 ld   ix,($0876)           ; read MAN_PTR
+2157: DD 2A 76 08 ld   ix,($0876)            ; read MAN_PTR
 215B: DD CB 00 56 bit  2,(ix+$00)
 215F: C8          ret  z
 2160: DD 7E 09    ld   a,(ix+$09)
@@ -5255,17 +5262,17 @@ S.D:
 
 
 225D: 3E 08       ld   a,$08
-225F: 32 47 43    ld   ($4347),a            ; set MAN_X
-2262: 21 45 43    ld   hl,$4345             ; load HL with address of ROOM_X
-2265: 34          inc  (hl)                 ; increment X coordinate within maze
+225F: 32 47 43    ld   ($4347),a             ; set MAN_X
+2262: 21 45 43    ld   hl,$4345              ; load HL with address of ROOM_X
+2265: 34          inc  (hl)                  ; increment X coordinate within maze
 2266: CD EB 22    call $22EB
 ; zero flag set if upright cabinet
-2269: 28 09       jr   z,$2274              ; if upright cabinet goto SCROLL_LEFT
+2269: 28 09       jr   z,$2274               ; if upright cabinet goto SCROLL_LEFT
 
 ; cocktail cabinet
 226B: 21 1F 4F    ld   hl,$4F1F
 226E: 11 E0 5F    ld   de,$5FE0
-2271: C3 C9 22    jp   $22C9                ; jump to S.R to scroll right
+2271: C3 C9 22    jp   $22C9                 ; jump to S.R to scroll right
 
 
 ;
@@ -5464,31 +5471,31 @@ UPDATE_SCORE:
 2348: CD 34 23    call $2334                 ; call GET_PLAYER_SCORE_PTR
 234B: 23          inc  hl
 234C: 23          inc  hl
-234D: 23          inc  hl                   ; bump HL to point to memory address just after last 2 digits of players score
-234E: CB 38       srl  b                    ; Divide By 2. If the index in B is an odd number, then carry will be set 
-2350: 08          ex   af,af'               ; switch to alternate register pair to preserve flags
-2351: 04          inc  b                    ; ensure B is at least 1 
+234D: 23          inc  hl                    ; bump HL to point to memory address just after last 2 digits of players score
+234E: CB 38       srl  b                     ; Divide By 2. If the index in B is an odd number, then carry will be set 
+2350: 08          ex   af,af'                ; switch to alternate register pair to preserve flags
+2351: 04          inc  b                     ; ensure B is at least 1 
 2352: 2B          dec  hl
 2353: 1D          dec  e
 2354: 10 FC       djnz $2352
 
-2356: 08          ex   af,af'               ; restore flags
-2357: 30 08       jr   nc,$2361             ; if carry is not set, then B on entry is even , goto $2361
+2356: 08          ex   af,af'                ; restore flags
+2357: 30 08       jr   nc,$2361              ; if carry is not set, then B on entry is even , goto $2361
 
 ; B is an odd number. In this situation we need to add to the upper nibble of the score BCD byte, so we need to change our value 
 ; parameter so that it effects the upper nibble. 
-2359: CB 21       sla  c                    ; move lower nibble..
+2359: CB 21       sla  c                     ; move lower nibble..
 235B: CB 21       sla  c
 235D: CB 21       sla  c
-235F: CB 21       sla  c                    ; to upper nibble
+235F: CB 21       sla  c                     ; to upper nibble
 
 ; Now HL = pointer to BCD byte to update, C= BCD value to add to byte pointed to by HL 
-2361: 79          ld   a,c                  ; get value into A
-2362: 86          add  a,(hl)               ; Add to BCD digits in existing score
-2363: 27          daa                       ; Ensure result is valid BCD, and set carry flag if add caused a carry
-2364: 77          ld   (hl),a               ; and update BCD digits in existing score
-2365: 30 08       jr   nc,$236F             ; if no carry occurred, we're done 
-2367: 2B          dec  hl                   ; otherwise, we need to carry over result to previous digit (going from 10s to hundreds to thousands etc if necessary.) 
+2361: 79          ld   a,c                   ; get value into A
+2362: 86          add  a,(hl)                ; Add to BCD digits in existing score
+2363: 27          daa                        ; Ensure result is valid BCD, and set carry flag if add caused a carry
+2364: 77          ld   (hl),a                ; and update BCD digits in existing score
+2365: 30 08       jr   nc,$236F              ; if no carry occurred, we're done 
+2367: 2B          dec  hl                    ; otherwise, we need to carry over result to previous digit (going from 10s to hundreds to thousands etc if necessary.) 
 2368: 1D          dec  e
 2369: 28 04       jr   z,$236F
 
@@ -5842,7 +5849,7 @@ BLAM:
 2505: 79          ld   a,c                   ; compare backlink (lo)
 2506: BB          cp   e                     ;  against dying_robot (lo)
 2507: 20 F3       jr   nz,$24FC              ; not a match → step scanner back
-                                              ; found: scanner points at link referencing dying_robot
+                                             ; found: scanner points at link referencing dying_robot
 2509: F3          di
 250A: DD 7E FE    ld   a,(ix-$02)            ; read dying_robot's own backlink (lo)
 250D: 77          ld   (hl),a                ; overwrite the found link → splices it out
@@ -5869,16 +5876,16 @@ BLAM:
 
 VELOCITY_TABLE:
 2519: 
-    00 00       ; No direction. Will not affect X,Y coordinates        
-    01 FF       ; Up right (XDelta = 1, YDelta =-1)
-    01 00       ; Right (XDelta = 1, YDelta =0)   
-    01 01       ; Down Right (XDelta = 1, YDelta = 1)
-    00 01       ; Down (XDelta = 0, YDelta = 1)
-    FF 01       ; Down Left (XDelta =-1, YDelta = 1)
-    FF 00       ; Left (XDelta = -1, YDelta = 0)   
-    FF FF       ; Up Left (XDelta =-1, YDelta = -1)   
-    00 FF       ; Up (XDelta =0, YDelta = -1)   
-    00 00       ; XDelta, YDelta both 0: Will not affect X,Y coordinates
+    00 00                                    ; No direction. Will not affect X,Y coordinates        
+    01 FF                                    ; Up right (XDelta = 1, YDelta =-1)
+    01 00                                    ; Right (XDelta = 1, YDelta =0)   
+    01 01                                    ; Down Right (XDelta = 1, YDelta = 1)
+    00 01                                    ; Down (XDelta = 0, YDelta = 1)
+    FF 01                                    ; Down Left (XDelta =-1, YDelta = 1)
+    FF 00                                    ; Left (XDelta = -1, YDelta = 0)   
+    FF FF                                    ; Up Left (XDelta =-1, YDelta = -1)   
+    00 FF                                    ; Up (XDelta =0, YDelta = -1)   
+    00 00                                    ; XDelta, YDelta both 0: Will not affect X,Y coordinates
 
 
 ;
@@ -5889,15 +5896,15 @@ VELOCITY_TABLE:
 
 ROBOT_ANIMATION_TABLES:
 252D:  
-    00 10        ; Pointer to robot Standing still pattern table  
-    13 10        ; Pointer to Robot moving up & right pattern table      
-    13 10        ; Pointer to Robot moving right pattern table   
-    13 10        ; Pointer to Robot moving down & right pattern table   
-    1C 10        ; Pointer to Robot moving down pattern table 
-    27 10        ; Pointer to Robot moving down & left pattern table  
-    27 10        ; Pointer to Robot moving left pattern table  
-    27 10        ; Pointer to Robot moving up & left pattern table
-    30 10        ; Pointer to Robot moving up pattern table
+    00 10                                    ; Pointer to robot Standing still pattern table  
+    13 10                                    ; Pointer to Robot moving up & right pattern table      
+    13 10                                    ; Pointer to Robot moving right pattern table   
+    13 10                                    ; Pointer to Robot moving down & right pattern table   
+    1C 10                                    ; Pointer to Robot moving down pattern table 
+    27 10                                    ; Pointer to Robot moving down & left pattern table  
+    27 10                                    ; Pointer to Robot moving left pattern table  
+    27 10                                    ; Pointer to Robot moving up & left pattern table
+    30 10                                    ; Pointer to Robot moving up pattern table
     
 253F: 41          ld   b,c
 
@@ -6837,74 +6844,74 @@ SHOOT:
 ; No direction
 S.TAB:
 2944: 
-    00 10       ; Pointer to pattern table @ $1000
-    00          ; Bolt X delta  
-    00          ; Bolt Y delta        
-    00          ; No direction
+    00 10                                    ; Pointer to pattern table @ $1000
+    00                                       ; Bolt X delta  
+    00                                       ; Bolt Y delta        
+    00                                       ; No direction
     00
 
 ; UP + RIGHT
 294A: 
-    00 10       ; Pointer to pattern table @ $1000
-    07          ; Bolt X delta  
-    06          ; Bolt Y delta   
-    06          ; DURL bits (RIGHT + UP)  
+    00 10                                    ; Pointer to pattern table @ $1000
+    07                                       ; Bolt X delta  
+    06                                       ; Bolt Y delta   
+    06                                       ; DURL bits (RIGHT + UP)  
     00
 
 ; RIGHT
 2950: 
-    00 10       ; Pointer to pattern table @ $1000 
-    07          ; Bolt X delta 
-    06          ; Bolt Y delta 
-    02          ; DURL bits (RIGHT)
+    00 10                                    ; Pointer to pattern table @ $1000 
+    07                                       ; Bolt X delta 
+    06                                       ; Bolt Y delta 
+    02                                       ; DURL bits (RIGHT)
     00
 
 ; DOWN + RIGHT
 2956: 
-    00 10       ; Pointer to pattern table @ $1000
-    07          ; Bolt X delta 
-    06          ; Bolt Y delta
-    0A          ; DURL bits (RIGHT + DOWN)
+    00 10                                    ; Pointer to pattern table @ $1000
+    07                                       ; Bolt X delta 
+    06                                       ; Bolt Y delta
+    0A                                       ; DURL bits (RIGHT + DOWN)
     00
 
 ; DOWN
 295C: 
-    00 10       ; Pointer to pattern table @ $1000
-    07          ; Bolt X delta 
-    06          ; Bolt Y delta
-    08          ; DURL bits (DOWN) 
+    00 10                                    ; Pointer to pattern table @ $1000
+    07                                       ; Bolt X delta 
+    06                                       ; Bolt Y delta
+    08                                       ; DURL bits (DOWN) 
     00
 
 ; DOWN + LEFT
 2962: 
-    00 10       ; Pointer to pattern table @ $1000
-    00          ; Bolt X delta 
-    06          ; Bolt Y delta
-    09          ; DURL bits (LEFT + DOWN)  
+    00 10                                    ; Pointer to pattern table @ $1000
+    00                                       ; Bolt X delta 
+    06                                       ; Bolt Y delta
+    09                                       ; DURL bits (LEFT + DOWN)  
     00
 
 ; LEFT
 2968: 
-    00 10       ; Pointer to pattern table @ $1000
-    00          ; Bolt X delta 
-    06          ; Bolt Y delta
-    01          ; DURL bits (LEFT)  
+    00 10                                    ; Pointer to pattern table @ $1000
+    00                                       ; Bolt X delta 
+    06                                       ; Bolt Y delta
+    01                                       ; DURL bits (LEFT)  
     00          
 
 ; UP + LEFT
 296E:
-    00 10       ; Pointer to pattern table @ $1000           
-    00          ; Bolt X delta 
-    06          ; Bolt Y delta
-    05          ; DURL bits (LEFT + UP) 
+    00 10                                    ; Pointer to pattern table @ $1000           
+    00                                       ; Bolt X delta 
+    06                                       ; Bolt Y delta
+    05                                       ; DURL bits (LEFT + UP) 
     00          
 
 ; UP
 2974:   
-    00 10       ; Pointer to pattern table @ $1000
-    07          ; Bolt X delta 
-    01          ; Bolt Y delta 
-    04          ; DURL bits (UP) 
+    00 10                                    ; Pointer to pattern table @ $1000
+    07                                       ; Bolt X delta 
+    01                                       ; Bolt Y delta 
+    04                                       ; DURL bits (UP) 
     00
 
 
@@ -6970,7 +6977,7 @@ PRINT_STRING_297B:
 ; See also: RtoAx (Relative To Absolute) in showa.asm within Frenzy's source code
 
 RTOAX:
-29A1: 06 90       ld   b,$90                ; Magic image RAM control bits - XOR write
+29A1: 06 90       ld   b,$90                 ; Magic image RAM control bits - XOR write
 
 ; Expects:
 ; B = bits to write to magicram_control_w
@@ -7329,9 +7336,9 @@ SHOWO:
 ; See also: SETDIR in super.asm within Frenzy's source code.
 
 SETDIR:
-2B39: E6 0F       and  $0F                    ; mask in DURL bits
-2B3B: B9          cp   c                      ; has direction of VECTOR changed?
-2B3C: C8          ret  z                      ; no, we don't need to update vector in SET_VELOCITY below. 
+2B39: E6 0F       and  $0F                   ; mask in DURL bits
+2B3B: B9          cp   c                     ; has direction of VECTOR changed?
+2B3C: C8          ret  z                     ; no, we don't need to update vector in SET_VELOCITY below. 
 
 
 ;
@@ -7640,13 +7647,13 @@ SAY_GOT_THE_HUMANOID_GOT_THE_INTRUDER:
 ; docs @ $2BAC for more info.
 ROBOT_TARGET_SPEECH_TABLE:
 2C25: 
-    0A      ; THE              
-    98      ; CHICKEN  
-    8C      ; IT       
-    0A      ; THE    
-    8F      ; HUMANOID     
-    0A      ; THE
-    92      ; INTRUDER                        ; bit 7 set to terminate the sentence    
+    0A                                       ; THE              
+    98                                       ; CHICKEN  
+    8C                                       ; IT       
+    0A                                       ; THE    
+    8F                                       ; HUMANOID     
+    0A                                       ; THE
+    92                                       ; INTRUDER                        ; bit 7 set to terminate the sentence    
 
 ;
 ; ROBOT_FIRST_WORD_SPEECH_TABLE contains a list of words that begin a sentence spoken by the robots.
@@ -7658,60 +7665,60 @@ ROBOT_TARGET_SPEECH_TABLE:
 
 ROBOT_FIRST_WORD_SPEECH_TABLE:
 2C2C: 
-    86      ; GET          
-    83      ; CHARGE    
-    82      ; ATTACK  
-    95      ; DESTROY    
-    85      ; SHOOT    
-    81      ; KILL    
+    86                                       ; GET          
+    83                                       ; CHARGE    
+    82                                       ; ATTACK  
+    95                                       ; DESTROY    
+    85                                       ; SHOOT    
+    81                                       ; KILL    
 
 ;
 ; Used to generate the sentence "<pick a sentence from ROBOT_TARGET_SPEECH_TABLE above> MUST NOT ESCAPE"
 ; Note how bit 7 of ESCAPE (the last word) is set.
 MUST_NOT_ESCAPE_SPEECH_TABLE:
 2C32: 
-    16      ; MUST   
-    17      ; NOT 
-    94      ; ESCAPE     
+    16                                       ; MUST   
+    17                                       ; NOT 
+    94                                       ; ESCAPE     
 
 
 
 CHICKEN_FIGHT_LIKE_A_ROBOT_SPEECH_BYTES:
 2C35: 
-    73          ; Pitch of speech
-    18          ; CHICKEN 
+    73                                       ; Pitch of speech
+    18                                       ; CHICKEN 
     47       
-    1B          ; "A" - TODO: why is this here? Wonder if its silent just to introduce a delay?       
+    1B                                       ; "A" - TODO: why is this here? Wonder if its silent just to introduce a delay?       
     73          
-    19          ; FIGHT 
-    1A          ; LIKE
-    1B          ; A
-    1C          ; ROBOT
+    19                                       ; FIGHT 
+    1A                                       ; LIKE
+    1B                                       ; A
+    1C                                       ; ROBOT
     47          
-    FF          ; Terminator byte
+    FF                                       ; Terminator byte
 
 GOT_THE_HUMANOID_GOT_THE_INTRUDER_SPEECH_BYTES:
 2C40: 
-    7B          ; Pitch of speech
-    04          ; GOT         
-    0A          ; THE
-    0F          ; HUMANOID
+    7B                                       ; Pitch of speech
+    04                                       ; GOT         
+    0A                                       ; THE
+    0F                                       ; HUMANOID
     7D          
-    04          ; GOT
-    0A          ; THE
-    12          ; INTRUDER
+    04                                       ; GOT
+    0A                                       ; THE
+    12                                       ; INTRUDER
     47          
-    FF          ; Terminator byte
+    FF                                       ; Terminator byte
 
 INTRUDER_ALERT_INTRUDER_ALERT:
 2C4A: 
-    7B          ; Pitch of speech   
-    12          ; INTRUDER                        
-    08          ; ALERT
-    12          ; INTRUDER
-    08          ; ALERT
+    7B                                       ; Pitch of speech   
+    12                                       ; INTRUDER                        
+    08                                       ; ALERT
+    12                                       ; INTRUDER
+    08                                       ; ALERT
     47          
-    FF          ; Terminator byte
+    FF                                       ; Terminator byte
 
 
 ;
@@ -8000,7 +8007,7 @@ INCREMENT_BY_1:
 2DD8: CD 7B 29    call $297B                 ; call PRINT_STRING_297B
 2DDB: 
     90          
-    20 08         ; X/Y coordinates
+    20 08                                    ; X/Y coordinates
 
 
 2DDE:  47 72 61 74 75 6C 69 65 72 65 2C 20 53 70 69 65  Gratuliere, Spie
@@ -9156,60 +9163,60 @@ SET_COLOUR_ATTRS_35AF:
 
 35B7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35BA: 
-    00          ; offset LSB
-    00          ; offset MSB ($0000 = row 0, col 0)
-    05          ; lines = 5 (20 pixel lines)
-    20          ; width = 32 bytes
-    AA          ; colour = $AA
+    00                                       ; offset LSB
+    00                                       ; offset MSB ($0000 = row 0, col 0)
+    05                                       ; lines = 5 (20 pixel lines)
+    20                                       ; width = 32 bytes
+    AA                                       ; colour = $AA
 35BF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35C2: 
-    A0          ; offset LSB
-    00          ; offset MSB ($00A0 = row 5, col 0)
-    29          ; lines = 41 (164 pixel lines)
-    20          ; width = 32 bytes
-    11          ; colour = $11
+    A0                                       ; offset LSB
+    00                                       ; offset MSB ($00A0 = row 5, col 0)
+    29                                       ; lines = 41 (164 pixel lines)
+    20                                       ; width = 32 bytes
+    11                                       ; colour = $11
 35C7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35CA: 
-    A0          ; offset LSB
-    00          ; offset MSB ($00A0 = row 5, col 0)
-    29          ; lines = 41 (164 pixel lines)
-    09          ; width = 9 bytes
-    99          ; colour = $99
+    A0                                       ; offset LSB
+    00                                       ; offset MSB ($00A0 = row 5, col 0)
+    29                                       ; lines = 41 (164 pixel lines)
+    09                                       ; width = 9 bytes
+    99                                       ; colour = $99
 35CF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35D2: 
-    A9          ; offset LSB
-    00          ; offset MSB ($00A9 = row 5, col 9)
-    29          ; lines = 41 (164 pixel lines)
-    08          ; width = 8 bytes
-    BB          ; colour = $BB
+    A9                                       ; offset LSB
+    00                                       ; offset MSB ($00A9 = row 5, col 9)
+    29                                       ; lines = 41 (164 pixel lines)
+    08                                       ; width = 8 bytes
+    BB                                       ; colour = $BB
 35D7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35DA: 
-    B0          ; offset LSB
-    00          ; offset MSB ($00B0 = row 5, col 16)
-    29          ; lines = 41 (164 pixel lines)
-    10          ; width = 16 bytes
-    55          ; colour = $55
+    B0                                       ; offset LSB
+    00                                       ; offset MSB ($00B0 = row 5, col 16)
+    29                                       ; lines = 41 (164 pixel lines)
+    10                                       ; width = 16 bytes
+    55                                       ; colour = $55
 35DF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35E2: 
-    C0          ; offset LSB
-    05          ; offset MSB ($05C0 = row 46, col 0)
-    0A          ; lines = 10 (40 pixel lines)
-    20          ; width = 32 bytes
-    77          ; colour = $77
+    C0                                       ; offset LSB
+    05                                       ; offset MSB ($05C0 = row 46, col 0)
+    0A                                       ; lines = 10 (40 pixel lines)
+    20                                       ; width = 32 bytes
+    77                                       ; colour = $77
 35E7: CD 57 36    call $3657                 ; call COLOUR_FILL
 35EA: 
-    80          ; offset LSB
-    06          ; offset MSB ($0680 = row 52, col 0)
-    04          ; lines = 4 (16 pixel lines)
-    0A          ; width = 10 bytes
-    AA          ; colour = $AA
+    80                                       ; offset LSB
+    06                                       ; offset MSB ($0680 = row 52, col 0)
+    04                                       ; lines = 4 (16 pixel lines)
+    0A                                       ; width = 10 bytes
+    AA                                       ; colour = $AA
 35EF: CD 57 36    call $3657                 ; call COLOUR_FILL
 35F2: 
-    96          ; offset LSB
-    06          ; offset MSB ($0696 = row 52, col 22)
-    04          ; lines = 4 (16 pixel lines)
-    0A          ; width = 10 bytes
-    DD          ; colour = $DD
+    96                                       ; offset LSB
+    06                                       ; offset MSB ($0696 = row 52, col 22)
+    04                                       ; lines = 4 (16 pixel lines)
+    0A                                       ; width = 10 bytes
+    DD                                       ; colour = $DD
 35F7: C9          ret
 
 
@@ -9220,11 +9227,11 @@ SET_COLOUR_ATTRS_35AF:
 COLOUR_FILL_WHITE:
 35F8: CD 57 36    call $3657                 ; call COLOUR_FILL
 35FB: 
-    00          ; offset LSB
-    00          ; offset MSB ($0000 = row 0, col 0)
-    38          ; lines = 56 (224 pixel lines = full screen)
-    20          ; width = 32 bytes
-    FF          ; colour = $FF
+    00                                       ; offset LSB
+    00                                       ; offset MSB ($0000 = row 0, col 0)
+    38                                       ; lines = 56 (224 pixel lines = full screen)
+    20                                       ; width = 32 bytes
+    FF                                       ; colour = $FF
 3600: C9          ret
 
 ;
@@ -9235,11 +9242,11 @@ COLOUR_FILL_WHITE:
 SET_INSERT_COIN_COLOUR_ATTRS:
 3601: CD 57 36    call $3657                 ; call COLOUR_FILL
 3604: 
-    E0          ; offset LSB
-    05          ; offset MSB ($05E0 = row 47, col 0)
-    04          ; lines = 4 (16 pixel lines)
-    20          ; width = 32 bytes
-    33          ; colour = $33
+    E0                                       ; offset LSB
+    05                                       ; offset MSB ($05E0 = row 47, col 0)
+    04                                       ; lines = 4 (16 pixel lines)
+    20                                       ; width = 32 bytes
+    33                                       ; colour = $33
 3609: C9          ret
 
 ;
@@ -9250,11 +9257,11 @@ SET_INSERT_COIN_COLOUR_ATTRS:
 SET_PRESS_START_1CRED_COLOUR_ATTRS:
 360A: CD 57 36    call $3657                 ; call COLOUR_FILL
 360D: 
-    E0          ; offset LSB
-    05          ; offset MSB ($05E0 = row 47, col 0)
-    04          ; lines = 4 (16 pixel lines)
-    20          ; width = 32 bytes
-    99          ; colour = $99
+    E0                                       ; offset LSB
+    05                                       ; offset MSB ($05E0 = row 47, col 0)
+    04                                       ; lines = 4 (16 pixel lines)
+    20                                       ; width = 32 bytes
+    99                                       ; colour = $99
 3612: C9          ret
 
 ;
@@ -9265,11 +9272,11 @@ SET_PRESS_START_1CRED_COLOUR_ATTRS:
 SET_PRESS_START_MULTICRED_COLOUR_ATTRS:
 3613: CD 57 36    call $3657                 ; call COLOUR_FILL
 3616: 
-    E0          ; offset LSB
-    05          ; offset MSB ($05E0 = row 47, col 0)
-    04          ; lines = 4 (16 pixel lines)
-    20          ; width = 32 bytes
-    66          ; colour = $66
+    E0                                       ; offset LSB
+    05                                       ; offset MSB ($05E0 = row 47, col 0)
+    04                                       ; lines = 4 (16 pixel lines)
+    20                                       ; width = 32 bytes
+    66                                       ; colour = $66
 361B: C9          ret
 
 ;
@@ -9280,32 +9287,32 @@ SET_PRESS_START_MULTICRED_COLOUR_ATTRS:
 SET_HI_SCORE_COLOUR_ATTRS:
 361C: CD 57 36    call $3657                 ; call COLOUR_FILL
 361F: 
-    00          ; offset LSB
-    00          ; offset MSB ($0000 = row 0, col 0)
-    08          ; lines = 8 (32 pixel lines)
-    20          ; width = 32 bytes
-    BB          ; colour = $BB
+    00                                       ; offset LSB
+    00                                       ; offset MSB ($0000 = row 0, col 0)
+    08                                       ; lines = 8 (32 pixel lines)
+    20                                       ; width = 32 bytes
+    BB                                       ; colour = $BB
 3624: CD 57 36    call $3657                 ; call COLOUR_FILL
 3627: 
-    00          ; offset LSB
-    01          ; offset MSB ($0100 = row 8, col 0)
-    10          ; lines = 16 (64 pixel lines)
-    20          ; width = 32 bytes
-    66          ; colour = $66
+    00                                       ; offset LSB
+    01                                       ; offset MSB ($0100 = row 8, col 0)
+    10                                       ; lines = 16 (64 pixel lines)
+    20                                       ; width = 32 bytes
+    66                                       ; colour = $66
 362C: CD 57 36    call $3657                 ; call COLOUR_FILL
 362F:
-    00          ; offset LSB
-    03          ; offset MSB ($0300 = row 24, col 0)
-    04          ; lines = 4 (16 pixel lines)
-    20          ; width = 32 bytes
-    FF          ; colour = $FF
+    00                                       ; offset LSB
+    03                                       ; offset MSB ($0300 = row 24, col 0)
+    04                                       ; lines = 4 (16 pixel lines)
+    20                                       ; width = 32 bytes
+    FF                                       ; colour = $FF
 3634: CD 57 36    call $3657                 ; call COLOUR_FILL
 3637:
-    80          ; offset LSB
-    03          ; offset MSB ($0380 = row 28, col 0)
-    1C          ; lines = 28 (112 pixel lines)
-    20          ; width = 32 bytes
-    AA          ; colour = $AA
+    80                                       ; offset LSB
+    03                                       ; offset MSB ($0380 = row 28, col 0)
+    1C                                       ; lines = 28 (112 pixel lines)
+    20                                       ; width = 32 bytes
+    AA                                       ; colour = $AA
 363C: C9          ret
 
 ;
@@ -9314,18 +9321,18 @@ SET_HI_SCORE_COLOUR_ATTRS:
 ;
 363D: CD 57 36    call $3657                 ; call COLOUR_FILL
 3640:
-    00          ; offset LSB
-    00          ; offset MSB ($0000 = row 0, col 0)
-    2F          ; lines = 47 (188 pixel lines)
-    20          ; width = 32 bytes
-    CC          ; colour = $CC
+    00                                       ; offset LSB
+    00                                       ; offset MSB ($0000 = row 0, col 0)
+    2F                                       ; lines = 47 (188 pixel lines)
+    20                                       ; width = 32 bytes
+    CC                                       ; colour = $CC
 3645: CD 57 36    call $3657                 ; call COLOUR_FILL
 3648: 
-    E0          ; offset LSB
-    05          ; offset MSB ($05E0 = row 47, col 0)
-    09          ; lines = 9 (36 pixel lines)
-    20          ; width = 32 bytes
-    AA          ; colour = $AA
+    E0                                       ; offset LSB
+    05                                       ; offset MSB ($05E0 = row 47, col 0)
+    09                                       ; lines = 9 (36 pixel lines)
+    20                                       ; width = 32 bytes
+    AA                                       ; colour = $AA
 364D: C9          ret
 
 ;
@@ -9334,11 +9341,11 @@ SET_HI_SCORE_COLOUR_ATTRS:
 ;
 364E: CD 57 36    call $3657                 ; call COLOUR_FILL 
 3651: 
-    00          ; offset LSB
-    00          ; offset MSB ($0000 = row 0, col 0)
-    34          ; lines = 52 (208 pixel lines)
-    20          ; width = 32 bytes
-    44          ; colour = $44
+    00                                       ; offset LSB
+    00                                       ; offset MSB ($0000 = row 0, col 0)
+    34                                       ; lines = 52 (208 pixel lines)
+    20                                       ; width = 32 bytes
+    44                                       ; colour = $44
 3656: C9          ret
 
 
@@ -9437,11 +9444,11 @@ COLOUR_FILL:
 C.WALLS:
 369F: CD 57 36    call $3657                 ; call COLOUR_FILL
 36A2: 
-    80          ; offset LSB
-    06          ; offset MSB ($0680 = row 52, col 0)
-    04          ; lines = 4 (16 pixel lines)
-    20          ; width = 32 bytes
-    77          ; colour = $77
+    80                                       ; offset LSB
+    06                                       ; offset MSB ($0680 = row 52, col 0)
+    04                                       ; lines = 4 (16 pixel lines)
+    20                                       ; width = 32 bytes
+    77                                       ; colour = $77
 
 36A7: CD E7 35    call $35E7                 ; fill bottom info area coloured boxes
 36AA: CD 34 23    call $2334                 ; call GET_PLAYER_SCORE_PTR  
@@ -9501,7 +9508,7 @@ C.WALLS:
 
 ; both cocktail and upright
 36FA: 3E 34       ld   a,$34                 ; A = 52 rows of colour attributes to process
-36FC: 08          ex   af,af'               ; save row counter in AF'
+36FC: 08          ex   af,af'                ; save row counter in AF'
 36FD: 06 20       ld   b,$20                 ; B = 32 bytes per row (full screen width)
 36FF: 7E          ld   a,(hl)                ; read byte from screen RAM
 3700: 23          inc  hl                    ; advance screen RAM pointer
@@ -9517,7 +9524,7 @@ C.WALLS:
 370E: 10 EF       djnz $36FF                 ; loop for all 32 bytes in this row
 3710: 11 60 00    ld   de,$0060              ; DE = 96 bytes (3 screen rows)
 3713: 19          add  hl,de                 ; skip 3 screen rows (we colour 4 at a time)
-3714: 08          ex   af,af'               ; retrieve row counter
+3714: 08          ex   af,af'                ; retrieve row counter
 3715: 3D          dec  a                     ; decrement row counter
 3716: 20 E4       jr   nz,$36FC              ; loop until all 52 rows processed
 3718: C9          ret                        ; end of C.WALLS
@@ -9533,8 +9540,8 @@ C.WALLS:
 ;
 
 UNCOLOUR_MAN:
-3719: CB 5E       bit  3,(hl)               ; test BLANK bit
-371B: CA 3C 37    jp   z,$373C              ; if not set, jump to COLOUR_MAN            
+3719: CB 5E       bit  3,(hl)                ; test BLANK bit
+371B: CA 3C 37    jp   z,$373C               ; if not set, jump to COLOUR_MAN            
 371E: CB 9E       res  3,(hl)
 3720: E5          push hl
 
